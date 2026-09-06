@@ -103,13 +103,13 @@ struct DrawingDetailView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
 
-                overlay(for: drawing)
+                overlay
             }
             .animation(.easeInOut(duration: 0.2), value: previewIssueId)
         }
         .navigationTitle(drawing.name)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar { toolbarContent(for: drawing) }
+        .toolbar { toolbarContent }
         .sheet(isPresented: $showDistanceSheet, onDismiss: {
             if case .calibrating(.enterDistance) = mode { resetCalibration() }
         }) {
@@ -143,13 +143,15 @@ struct DrawingDetailView: View {
     // MARK: - Toolbar
 
     @ToolbarContentBuilder
-    private func toolbarContent(for drawing: Drawing) -> some ToolbarContent {
+    private var toolbarContent: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
             switch mode {
             case .idle:
                 Button("Add issue") { startPlacingIssue() }
-                Button(drawing.isCalibrated ? "Recalibrate" : "Set scale") {
-                    startCalibration()
+                Menu {
+                    Button("Set scale") { startCalibration() }
+                } label: {
+                    Label("More", systemImage: "ellipsis.circle")
                 }
             case .placingIssue, .calibrating:
                 Button("Cancel", role: .cancel) { cancelActiveMode() }
@@ -160,7 +162,7 @@ struct DrawingDetailView: View {
     // MARK: - Overlay panels
 
     @ViewBuilder
-    private func overlay(for drawing: Drawing) -> some View {
+    private var overlay: some View {
         switch mode {
         case .placingIssue:
             instructionBar("Tap a point on the drawing to place the issue")
@@ -168,13 +170,7 @@ struct DrawingDetailView: View {
             instructionBar("Tap point A on the drawing")
         case .calibrating(.tapB):
             instructionBar("Tap point B on the drawing")
-        case .idle:
-            if previewIssueId == nil,
-               let calibration = drawing.calibration(forPage: 0) ?? drawing.calibrations.first {
-                CalibrationDebugCard(calibration: calibration)
-                    .padding()
-            }
-        case .calibrating(.enterDistance):
+        case .idle, .calibrating(.enterDistance):
             EmptyView()
         }
     }
@@ -384,50 +380,6 @@ private struct IssuePreviewCard: View {
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .shadow(radius: 6, y: 3)
-    }
-}
-
-/// Small debug readout shown after calibration — the foundation for future
-/// measurements.
-private struct CalibrationDebugCard: View {
-    let calibration: PageCalibration
-
-    private var enteredString: String {
-        "\(formatted(calibration.enteredValue)) \(calibration.enteredUnit.label)"
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("Calibrated", systemImage: "checkmark.seal.fill")
-                .font(.headline)
-                .foregroundStyle(.green)
-
-            debugRow("Page", "\(calibration.pageIndex + 1)")
-            debugRow("Measured distance", enteredString)
-            debugRow("PDF distance", "\(formatted(calibration.pdfDistance)) pt")
-            debugRow("mm per PDF unit", formatted(calibration.mmPerPDFUnit, digits: 4))
-        }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .shadow(radius: 6, y: 3)
-    }
-
-    private func debugRow(_ title: String, _ value: String) -> some View {
-        HStack {
-            Text(title)
-                .foregroundStyle(.secondary)
-            Spacer()
-            Text(value)
-                .font(.subheadline.monospacedDigit())
-                .fontWeight(.medium)
-        }
-        .font(.subheadline)
-    }
-
-    private func formatted(_ value: Double, digits: Int = 2) -> String {
-        String(format: "%.\(digits)f", value)
     }
 }
 

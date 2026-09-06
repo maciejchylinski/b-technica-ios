@@ -1,9 +1,24 @@
 import SwiftUI
 
-/// Simple project home. Shows the active project and a quick summary so the
-/// app opens onto something concrete rather than an empty dashboard.
+/// Project home: shortcuts into the main MVP flows and a few useful counts.
 struct HomeView: View {
     @EnvironmentObject private var store: AppStore
+    @Binding var selectedTab: AppTab
+
+    @State private var showingPicker = false
+    @State private var importError: String?
+
+    private var openIssueCount: Int {
+        store.data.issues.filter { $0.status == .open }.count
+    }
+
+    private var issuesWithPhotos: Int {
+        store.data.issues.filter { !$0.photos.isEmpty }.count
+    }
+
+    private var issuesWithoutPhotos: Int {
+        store.data.issues.filter { $0.photos.isEmpty }.count
+    }
 
     var body: some View {
         NavigationStack {
@@ -19,25 +34,67 @@ struct HomeView: View {
                     .padding(.vertical, 4)
                 }
 
+                Section("Shortcuts") {
+                    Button {
+                        selectedTab = .drawings
+                    } label: {
+                        shortcutRow(icon: "doc.richtext", title: "Open drawings")
+                    }
+                    Button {
+                        showingPicker = true
+                    } label: {
+                        shortcutRow(icon: "square.and.arrow.down", title: "Import drawing")
+                    }
+                    Button {
+                        selectedTab = .issues
+                    } label: {
+                        shortcutRow(icon: "exclamationmark.bubble", title: "Open issues")
+                    }
+                }
+
                 Section("Overview") {
                     summaryRow(icon: "doc.richtext",
                                title: "Drawings",
                                value: "\(store.data.drawings.count)")
-                    summaryRow(icon: "checkmark.seal",
-                               title: "Calibrated drawings",
-                               value: "\(store.data.drawings.filter { $0.isCalibrated }.count)")
                     summaryRow(icon: "exclamationmark.bubble",
-                               title: "Issues",
-                               value: "\(store.data.issues.count)")
-                }
-
-                Section {
-                    Text("Import a PDF drawing in the Drawings tab, open it, then set its scale to unlock measurements and pinned issues.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                               title: "Open issues",
+                               value: "\(openIssueCount)")
+                    summaryRow(icon: "photo.fill",
+                               title: "Issues with photos",
+                               value: "\(issuesWithPhotos)")
+                    summaryRow(icon: "photo",
+                               title: "Issues without photos",
+                               value: "\(issuesWithoutPhotos)")
                 }
             }
             .navigationTitle("Home")
+            .sheet(isPresented: $showingPicker) {
+                PDFDocumentPicker { url in
+                    handlePicked(url)
+                }
+                .ignoresSafeArea()
+            }
+            .alert("Import failed",
+                   isPresented: Binding(get: { importError != nil },
+                                        set: { if !$0 { importError = nil } })) {
+                Button("OK", role: .cancel) { importError = nil }
+            } message: {
+                Text(importError ?? "")
+            }
+        }
+    }
+
+    private func shortcutRow(icon: String, title: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundStyle(Theme.blue)
+                .frame(width: 28)
+            Text(title)
+                .foregroundStyle(.primary)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
         }
     }
 
@@ -53,8 +110,17 @@ struct HomeView: View {
                 .foregroundStyle(.secondary)
         }
     }
+
+    private func handlePicked(_ url: URL) {
+        do {
+            try store.importDrawing(from: url)
+            selectedTab = .drawings
+        } catch {
+            importError = error.localizedDescription
+        }
+    }
 }
 
 #Preview {
-    HomeView().environmentObject(AppStore())
+    HomeView(selectedTab: .constant(.home)).environmentObject(AppStore())
 }

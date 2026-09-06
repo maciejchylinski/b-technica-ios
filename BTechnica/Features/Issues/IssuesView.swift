@@ -77,6 +77,10 @@ private struct IssueRow: View {
                     Text("·")
                     Text(drawingName)
                         .lineLimit(1)
+                    if !issue.photos.isEmpty {
+                        Text("·")
+                        Label("\(issue.photos.count)", systemImage: "photo")
+                    }
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)

@@ -92,7 +92,7 @@ struct DrawingsListView: View {
     }
 }
 
-/// One row in the drawings list, showing name, page count and calibration state.
+/// One row in the drawings list, showing name, page count and scale status.
 private struct DrawingRow: View {
     let drawing: Drawing
 

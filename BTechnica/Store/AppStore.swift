@@ -1,13 +1,15 @@
 import Foundation
 import PDFKit
 import SwiftUI
+import UIKit
 
 /// Central observable store for the app.
 ///
 /// Responsibilities:
 ///  - own the in-memory `AppData` and publish changes to SwiftUI,
 ///  - persist `AppData` to a JSON file in Documents on every mutation,
-///  - manage the on-disk PDF files (copy on import, resolve absolute URLs).
+///  - manage the on-disk PDF files (copy on import, resolve absolute URLs),
+///  - manage issue photo files under Documents/IssuePhotos/.
 ///
 /// This is deliberately a plain `ObservableObject` + JSON rather than a heavy
 /// persistence framework, matching the "simple, readable" goal of this slice.
@@ -32,11 +34,18 @@ final class AppStore: ObservableObject {
         documentsURL.appendingPathComponent("Drawings", isDirectory: true)
     }
 
+    /// Documents/IssuePhotos/ — copied/captured issue photos (JPEG files).
+    private var issuePhotosDirectoryURL: URL {
+        documentsURL.appendingPathComponent("IssuePhotos", isDirectory: true)
+    }
+
     init() {
-        // Ensure the Drawings directory exists before anything else.
-        let dir = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Drawings", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        // Ensure local file directories exist before anything else.
+        let docs = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        for name in ["Drawings", "IssuePhotos"] {
+            let dir = docs.appendingPathComponent(name, isDirectory: true)
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
 
         // Load existing data or seed a default project.
         let url = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -129,6 +138,9 @@ final class AppStore: ObservableObject {
         // Remove the copied PDF too so storage doesn't leak.
         let url = fileURL(for: drawing)
         try? fileManager.removeItem(at: url)
+        for photo in data.issues.filter({ $0.drawingId == drawing.id }).flatMap(\.photos) {
+            try? fileManager.removeItem(at: fileURL(for: photo))
+        }
         data.drawings.removeAll { $0.id == drawing.id }
         data.issues.removeAll { $0.drawingId == drawing.id }
         persist()
@@ -172,6 +184,57 @@ final class AppStore: ObservableObject {
     /// Next project-wide issue number (1-based, stable after assignment).
     func nextIssueNumber() -> Int {
         (data.issues.map(\.number).max() ?? 0) + 1
+    }
+
+    // MARK: - Issue photos
+
+    /// Absolute URL of an issue photo on disk. Rebuilt from the relative
+    /// `fileName` every time because the sandbox path can change between runs.
+    func fileURL(for photo: IssuePhoto) -> URL {
+        issuePhotosDirectoryURL.appendingPathComponent(photo.fileName)
+    }
+
+    /// Loads a photo from disk. Returns `nil` when the file is missing or unreadable.
+    func image(for photo: IssuePhoto) -> UIImage? {
+        let url = fileURL(for: photo)
+        guard fileManager.fileExists(atPath: url.path) else { return nil }
+        return UIImage(contentsOfFile: url.path)
+    }
+
+    /// JPEG-encodes `image`, writes it under Documents/IssuePhotos with a UUID
+    /// file name, and appends metadata on the issue.
+    @discardableResult
+    func addPhoto(from image: UIImage, to issueId: UUID) -> IssuePhoto? {
+        guard let index = data.issues.firstIndex(where: { $0.id == issueId }) else { return nil }
+        guard let jpeg = image.jpegData(compressionQuality: 0.85) else { return nil }
+
+        do {
+            try fileManager.createDirectory(at: issuePhotosDirectoryURL, withIntermediateDirectories: true)
+        } catch {
+            print("[AppStore] Failed to create IssuePhotos directory: \(error)")
+            return nil
+        }
+
+        var photoId = UUID()
+        var fileName = "\(photoId.uuidString).jpg"
+        var destination = issuePhotosDirectoryURL.appendingPathComponent(fileName)
+        while fileManager.fileExists(atPath: destination.path) {
+            photoId = UUID()
+            fileName = "\(photoId.uuidString).jpg"
+            destination = issuePhotosDirectoryURL.appendingPathComponent(fileName)
+        }
+
+        do {
+            try jpeg.write(to: destination, options: [.atomic])
+        } catch {
+            print("[AppStore] Failed to write photo: \(error)")
+            return nil
+        }
+
+        let photo = IssuePhoto(id: photoId, fileName: fileName)
+        data.issues[index].photos.append(photo)
+        persist()
+        return photo
     }
 
     // MARK: - Persistence

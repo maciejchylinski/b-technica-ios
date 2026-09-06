@@ -36,7 +36,7 @@ struct Drawing: Codable, Identifiable, Equatable {
 
     var isCalibrated: Bool { !calibrations.isEmpty }
 
-    var calibrationStatusText: String { isCalibrated ? "Calibrated" : "Not calibrated" }
+    var calibrationStatusText: String { isCalibrated ? "Scale set" : "No scale" }
 
     func calibration(forPage pageIndex: Int) -> PageCalibration? {
         calibrations.first { $0.pageIndex == pageIndex }

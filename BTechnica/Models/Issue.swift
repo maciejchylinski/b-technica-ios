@@ -25,8 +25,8 @@ enum IssueStatus: String, Codable, CaseIterable, Identifiable, Hashable {
 /// never screen coordinates or percentages. Pins stay attached to the drawing
 /// through zoom and pan because PDFKit converts these values at draw time.
 ///
-/// Future additions (not in this slice):
-///  - photos referencing images in local storage,
+/// Photos are stored as metadata here; image bytes live as files under
+/// Documents/IssuePhotos/. Future additions (not in this slice):
 ///  - assignee, due date, comments / activity log,
 ///  - sync / reports.
 struct Issue: Codable, Identifiable, Equatable, Hashable {
@@ -49,6 +49,8 @@ struct Issue: Codable, Identifiable, Equatable, Hashable {
     /// Optional contractor name.
     var contractor: String?
     var createdDate: Date
+    /// Local photo attachments (file references, not image blobs).
+    var photos: [IssuePhoto]
 
     init(id: UUID = UUID(),
          drawingId: UUID,
@@ -61,7 +63,8 @@ struct Issue: Codable, Identifiable, Equatable, Hashable {
          status: IssueStatus = .open,
          discipline: String? = nil,
          contractor: String? = nil,
-         createdDate: Date = Date()) {
+         createdDate: Date = Date(),
+         photos: [IssuePhoto] = []) {
         self.id = id
         self.drawingId = drawingId
         self.pageIndex = pageIndex
@@ -74,6 +77,7 @@ struct Issue: Codable, Identifiable, Equatable, Hashable {
         self.discipline = discipline
         self.contractor = contractor
         self.createdDate = createdDate
+        self.photos = photos
     }
 
     var pdfPoint: PDFPoint { PDFPoint(x: pdfX, y: pdfY) }
@@ -89,7 +93,8 @@ struct Issue: Codable, Identifiable, Equatable, Hashable {
          status: IssueStatus = .open,
          discipline: String? = nil,
          contractor: String? = nil,
-         createdDate: Date = Date()) {
+         createdDate: Date = Date(),
+         photos: [IssuePhoto] = []) {
         self.init(id: id,
                   drawingId: drawingId,
                   pageIndex: pageIndex,
@@ -101,14 +106,15 @@ struct Issue: Codable, Identifiable, Equatable, Hashable {
                   status: status,
                   discipline: discipline,
                   contractor: contractor,
-                  createdDate: createdDate)
+                  createdDate: createdDate,
+                  photos: photos)
     }
 
     // MARK: - Codable
 
     private enum CodingKeys: String, CodingKey {
         case id, drawingId, pageIndex, pdfX, pdfY, number, title, details, status
-        case discipline, contractor, createdDate
+        case discipline, contractor, createdDate, photos
         /// Legacy keys from the foundation-only Issue model.
         case x, y
     }
@@ -135,6 +141,7 @@ struct Issue: Codable, Identifiable, Equatable, Hashable {
         discipline = try c.decodeIfPresent(String.self, forKey: .discipline)
         contractor = try c.decodeIfPresent(String.self, forKey: .contractor)
         createdDate = try c.decodeIfPresent(Date.self, forKey: .createdDate) ?? Date()
+        photos = try c.decodeIfPresent([IssuePhoto].self, forKey: .photos) ?? []
     }
 
     func encode(to encoder: Encoder) throws {
@@ -151,5 +158,6 @@ struct Issue: Codable, Identifiable, Equatable, Hashable {
         try c.encodeIfPresent(discipline, forKey: .discipline)
         try c.encodeIfPresent(contractor, forKey: .contractor)
         try c.encode(createdDate, forKey: .createdDate)
+        try c.encode(photos, forKey: .photos)
     }
 }

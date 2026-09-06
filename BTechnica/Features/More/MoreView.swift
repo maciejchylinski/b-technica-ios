@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// "More" tab: project info and app details. Kept minimal for this slice.
+/// "More" tab: project info, app details, and secondary placeholders.
 struct MoreView: View {
     @EnvironmentObject private var store: AppStore
 
@@ -14,13 +14,21 @@ struct MoreView: View {
                                                                                     time: .omitted))
                 }
 
+                Section("Tools") {
+                    NavigationLink {
+                        EquipmentView()
+                    } label: {
+                        Label("Equipment", systemImage: "shippingbox")
+                    }
+                }
+
                 Section("App") {
                     LabeledContent("Name", value: "BTechnica")
                     LabeledContent("Mode", value: "Offline · local storage")
                 }
 
                 Section {
-                    Text("BTechnica is an offline-first construction field app. This build focuses on importing PDF drawings and calibrating their scale.")
+                    Text("BTechnica is an offline-first construction field app. Import a PDF drawing, pin issues, and attach photos.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

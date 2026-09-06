@@ -28,7 +28,7 @@ struct IssueFormView: View {
                 } header: {
                     Text("Issue")
                 } footer: {
-                    Text("Status defaults to Open. Location is saved in PDF page coordinates (page \(pageIndex + 1)).")
+                    Text("Status defaults to Open. The pin is saved on page \(pageIndex + 1) of the drawing.")
                 }
 
                 Section("Optional") {

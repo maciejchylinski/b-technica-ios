@@ -4,6 +4,10 @@ import SwiftUI
 struct ReportsView: View {
     @EnvironmentObject private var store: AppStore
 
+    @State private var statusFilter: StatusFilter = .all
+    @State private var drawingFilter: DrawingFilter = .all
+    @State private var contractorFilter: StringFilter = .all
+    @State private var disciplineFilter: StringFilter = .all
     @State private var isGenerating = false
     @State private var shareURL: URL?
     @State private var showShareSheet = false
@@ -16,26 +20,109 @@ struct ReportsView: View {
         }
     }
 
+    private var filteredIssues: [Issue] {
+        sortedIssues.filter { issue in
+            statusMatches(issue)
+                && drawingMatches(issue)
+                && stringMatches(issue.contractor, filter: contractorFilter)
+                && stringMatches(issue.discipline, filter: disciplineFilter)
+        }
+    }
+
+    private var filteredPhotoCount: Int {
+        filteredIssues.reduce(0) { $0 + $1.photos.count }
+    }
+
+    private var filterSummary: String {
+        var parts: [String] = []
+        if let status = statusFilter.status {
+            parts.append("Status: \(status.label)")
+        }
+        if case .drawing(let id) = drawingFilter {
+            let name = store.data.drawings.first { $0.id == id }?.name ?? "Selected drawing"
+            parts.append("Drawing: \(name)")
+        }
+        if let contractorLabel = contractorFilter.summaryLabel(noun: "Contractor") {
+            parts.append(contractorLabel)
+        }
+        if let disciplineLabel = disciplineFilter.summaryLabel(noun: "Discipline") {
+            parts.append(disciplineLabel)
+        }
+        return parts.isEmpty ? "All issues" : parts.joined(separator: " · ")
+    }
+
     var body: some View {
         List {
             Section {
+                Picker("Status", selection: $statusFilter) {
+                    Text("All").tag(StatusFilter.all)
+                    Text(IssueStatus.open.label).tag(StatusFilter.status(.open))
+                    Text(IssueStatus.inProgress.label).tag(StatusFilter.status(.inProgress))
+                    if statusOptions.contains(.resolved) {
+                        Text(IssueStatus.resolved.label).tag(StatusFilter.status(.resolved))
+                    }
+                    if statusOptions.contains(.closed) {
+                        Text(IssueStatus.closed.label).tag(StatusFilter.status(.closed))
+                    }
+                }
+
+                Picker("Drawing", selection: $drawingFilter) {
+                    Text("All drawings").tag(DrawingFilter.all)
+                    ForEach(drawingsInIssues) { drawing in
+                        Text(drawing.name).tag(DrawingFilter.drawing(drawing.id))
+                    }
+                }
+
+                Picker("Contractor", selection: $contractorFilter) {
+                    Text("All contractors").tag(StringFilter.all)
+                    if hasBlank(store.data.issues.map(\.contractor)) {
+                        Text("No contractor").tag(StringFilter.none)
+                    }
+                    ForEach(contractorNames, id: \.self) { name in
+                        Text(name).tag(StringFilter.value(name))
+                    }
+                }
+
+                Picker("Discipline", selection: $disciplineFilter) {
+                    Text("All disciplines").tag(StringFilter.all)
+                    if hasBlank(store.data.issues.map(\.discipline)) {
+                        Text("No discipline").tag(StringFilter.none)
+                    }
+                    ForEach(disciplineNames, id: \.self) { name in
+                        Text(name).tag(StringFilter.value(name))
+                    }
+                }
+            } header: {
+                Text("Filters")
+            } footer: {
+                Text("Preview and export use these filters.")
+            }
+
+            Section {
                 LabeledContent("Project", value: store.data.project.name)
-                LabeledContent("Issues", value: "\(sortedIssues.count)")
+                LabeledContent("Issues", value: "\(filteredIssues.count)")
+                LabeledContent("Photos", value: "\(filteredPhotoCount)")
+                LabeledContent("Filters", value: filterSummary)
                 LabeledContent("Generated", value: Date().formatted(date: .abbreviated, time: .shortened))
             } header: {
                 Text("Report preview")
             } footer: {
-                Text("Creates a PDF of all issues in this project, including photos when available.")
+                Text("Creates a PDF of the matching issues, including photos when available.")
             }
 
-            if sortedIssues.isEmpty {
+            if store.data.issues.isEmpty {
                 Section {
                     Text("No issues yet. Pin an issue on a drawing first.")
                         .foregroundStyle(.secondary)
                 }
+            } else if filteredIssues.isEmpty {
+                Section {
+                    Text("No issues match the current filters. Change a filter to include issues in the report.")
+                        .foregroundStyle(.secondary)
+                }
             } else {
                 Section("Issues included") {
-                    ForEach(sortedIssues) { issue in
+                    ForEach(filteredIssues) { issue in
                         VStack(alignment: .leading, spacing: 4) {
                             Text("#\(issue.number)  \(issue.title)")
                                 .font(.headline)
@@ -57,25 +144,22 @@ struct ReportsView: View {
                     }
                 }
             }
-
-            Section {
-                Button {
-                    generateAndShare()
-                } label: {
-                    if isGenerating {
-                        HStack {
-                            ProgressView()
-                            Text("Generating…")
-                        }
-                    } else {
-                        Label("Export PDF report", systemImage: "square.and.arrow.up")
-                    }
-                }
-                .disabled(isGenerating)
-            }
         }
         .navigationTitle("Reports")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if isGenerating {
+                    ProgressView()
+                } else {
+                    Button("Export PDF") {
+                        generateAndShare()
+                    }
+                    .disabled(filteredIssues.isEmpty)
+                    .accessibilityIdentifier("exportPDFReport")
+                }
+            }
+        }
         .sheet(isPresented: $showShareSheet, onDismiss: {
             shareURL = nil
         }) {
@@ -92,18 +176,75 @@ struct ReportsView: View {
         }
     }
 
+    private var statusOptions: Set<IssueStatus> {
+        Set(store.data.issues.map(\.status))
+    }
+
+    private var drawingsInIssues: [Drawing] {
+        let ids = Set(store.data.issues.map(\.drawingId))
+        return store.data.drawings
+            .filter { ids.contains($0.id) }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    private var contractorNames: [String] {
+        uniqueNonEmptyValues(store.data.issues.map(\.contractor))
+    }
+
+    private var disciplineNames: [String] {
+        uniqueNonEmptyValues(store.data.issues.map(\.discipline))
+    }
+
+    private func statusMatches(_ issue: Issue) -> Bool {
+        guard let status = statusFilter.status else { return true }
+        return issue.status == status
+    }
+
+    private func drawingMatches(_ issue: Issue) -> Bool {
+        guard case .drawing(let id) = drawingFilter else { return true }
+        return issue.drawingId == id
+    }
+
+    private func stringMatches(_ value: String?, filter: StringFilter) -> Bool {
+        switch filter {
+        case .all:
+            return true
+        case .none:
+            return isBlank(value)
+        case .value(let name):
+            return value == name
+        }
+    }
+
+    private func uniqueNonEmptyValues(_ values: [String?]) -> [String] {
+        let names = values.compactMap { value -> String? in
+            guard let value, !isBlank(value) else { return nil }
+            return value
+        }
+        return Array(Set(names)).sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
+
+    private func hasBlank(_ values: [String?]) -> Bool {
+        values.contains { isBlank($0) }
+    }
+
+    private func isBlank(_ value: String?) -> Bool {
+        (value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "").isEmpty
+    }
+
     private func drawingName(for issue: Issue) -> String {
         store.data.drawings.first { $0.id == issue.drawingId }?.name ?? "Unknown drawing"
     }
 
     private func generateAndShare() {
-        guard !isGenerating else { return }
+        guard !isGenerating, !filteredIssues.isEmpty else { return }
         isGenerating = true
         errorMessage = nil
 
         let projectName = store.data.project.name
         let generatedDate = Date()
-        let blocks: [IssueReportGenerator.IssueBlock] = sortedIssues.map { issue in
+        let summary = filterSummary
+        let blocks: [IssueReportGenerator.IssueBlock] = filteredIssues.map { issue in
             let photos = issue.photos.compactMap { store.image(for: $0) }
             return IssueReportGenerator.IssueBlock(
                 number: issue.number,
@@ -121,7 +262,8 @@ struct ReportsView: View {
             let url = try IssueReportGenerator.writePDF(
                 from: .init(projectName: projectName,
                             generatedDate: generatedDate,
-                            issues: blocks)
+                            issues: blocks,
+                            filterSummary: summary)
             )
             isGenerating = false
             shareURL = url
@@ -129,6 +271,38 @@ struct ReportsView: View {
         } catch {
             isGenerating = false
             errorMessage = error.localizedDescription
+        }
+    }
+}
+
+private enum StatusFilter: Hashable {
+    case all
+    case status(IssueStatus)
+
+    var status: IssueStatus? {
+        if case .status(let status) = self { return status }
+        return nil
+    }
+}
+
+private enum DrawingFilter: Hashable {
+    case all
+    case drawing(UUID)
+}
+
+private enum StringFilter: Hashable {
+    case all
+    case none
+    case value(String)
+
+    func summaryLabel(noun: String) -> String? {
+        switch self {
+        case .all:
+            return nil
+        case .none:
+            return "\(noun): No \(noun.lowercased())"
+        case .value(let name):
+            return "\(noun): \(name)"
         }
     }
 }

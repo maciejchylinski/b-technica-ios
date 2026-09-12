@@ -8,6 +8,8 @@ enum IssueReportGenerator {
         var projectName: String
         var generatedDate: Date
         var issues: [IssueBlock]
+        /// Short description of applied filters, e.g. "All issues" or "Status: Open".
+        var filterSummary: String
     }
 
     struct IssueBlock {
@@ -112,6 +114,7 @@ enum IssueReportGenerator {
         y = drawLabeled("Project", value: input.projectName, at: y)
         y = drawLabeled("Generated", value: dateText, at: y)
         y = drawLabeled("Issues", value: "\(input.issues.count)", at: y)
+        y = drawLabeled("Filters", value: input.filterSummary, at: y)
         if continuing {
             y = drawText("Continued…",
                          font: .italicSystemFont(ofSize: 11),

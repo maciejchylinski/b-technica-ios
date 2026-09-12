@@ -305,6 +305,178 @@ final class AppStore: ObservableObject {
         return nil
     }
 
+    // MARK: - Equipment
+
+    func equipment(id: UUID) -> EquipmentItem? {
+        data.equipment.first { $0.id == id }
+    }
+
+    @discardableResult
+    func addEquipment(name: String,
+                      category: String? = nil,
+                      identifier: String? = nil,
+                      notes: String? = nil) -> EquipmentItem? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let created = EquipmentEvent(type: .created, notes: EquipmentItem.nonEmpty(notes))
+        let item = EquipmentItem(
+            item: trimmed,
+            category: category,
+            identifier: identifier,
+            notes: notes,
+            status: .available,
+            history: [created]
+        )
+        data.equipment.append(item)
+        persist()
+        return item
+    }
+
+    /// Updates name and optional identity fields. Status / issue state stay as stored.
+    func updateEquipmentDetails(id: UUID,
+                                name: String,
+                                category: String?,
+                                identifier: String?,
+                                notes: String?) {
+        guard let index = data.equipment.firstIndex(where: { $0.id == id }) else { return }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        var updated = data.equipment[index]
+        let previous = updated
+        updated.item = trimmed
+        updated.category = EquipmentItem.nonEmpty(category)
+        updated.identifier = EquipmentItem.nonEmpty(identifier)
+        updated.notes = EquipmentItem.nonEmpty(notes)
+
+        let changed = previous.item != updated.item
+            || previous.category != updated.category
+            || previous.identifier != updated.identifier
+            || previous.notes != updated.notes
+        if changed {
+            updated.history.append(EquipmentEvent(type: .edited))
+            data.equipment[index] = updated
+            persist()
+        }
+    }
+
+    /// Hands out an item. `issuedTo` is required free text (person / company).
+    @discardableResult
+    func issueEquipment(id: UUID,
+                        issuedTo: String,
+                        location: String? = nil,
+                        date: Date = Date(),
+                        notes: String? = nil) -> String? {
+        guard let index = data.equipment.firstIndex(where: { $0.id == id }) else {
+            return "Equipment not found."
+        }
+        var item = data.equipment[index]
+        guard item.canIssue else {
+            return "This item cannot be issued while it is \(item.status.label.lowercased())."
+        }
+        let person = EquipmentItem.nonEmpty(issuedTo)
+        guard let person else {
+            return "Enter who the equipment is issued to."
+        }
+
+        item.status = .issued
+        item.issuedTo = person
+        item.location = EquipmentItem.nonEmpty(location)
+        item.issuedDate = date
+        item.returnedDate = nil
+        item.history.append(EquipmentEvent(
+            date: date,
+            type: .issued,
+            person: person,
+            location: location,
+            notes: notes
+        ))
+        data.equipment[index] = item
+        persist()
+        return nil
+    }
+
+    /// Marks an issued item as returned (status `.returned`).
+    @discardableResult
+    func returnEquipment(id: UUID,
+                         date: Date = Date(),
+                         notes: String? = nil) -> String? {
+        guard let index = data.equipment.firstIndex(where: { $0.id == id }) else {
+            return "Equipment not found."
+        }
+        var item = data.equipment[index]
+        guard item.canReturn else {
+            return "Only issued items can be returned."
+        }
+
+        let previousHolder = item.issuedTo
+        item.status = .returned
+        item.returnedDate = date
+        item.issuedTo = nil
+        item.history.append(EquipmentEvent(
+            date: date,
+            type: .returned,
+            person: previousHolder,
+            location: item.location,
+            notes: notes
+        ))
+        data.equipment[index] = item
+        persist()
+        return nil
+    }
+
+    /// Sets Damaged or Lost (and records a history event).
+    @discardableResult
+    func markEquipment(id: UUID,
+                       status: EquipmentStatus,
+                       notes: String? = nil) -> String? {
+        guard status == .damaged || status == .lost else {
+            return "Only damaged or lost can be set this way."
+        }
+        guard let index = data.equipment.firstIndex(where: { $0.id == id }) else {
+            return "Equipment not found."
+        }
+        var item = data.equipment[index]
+        item.status = status
+        if status == .damaged || status == .lost {
+            // No longer actively issued.
+            item.issuedTo = nil
+        }
+        let eventType: EquipmentEventType = status == .damaged ? .markedDamaged : .markedLost
+        item.history.append(EquipmentEvent(
+            type: eventType,
+            location: item.location,
+            notes: notes
+        ))
+        data.equipment[index] = item
+        persist()
+        return nil
+    }
+
+    /// Marks a returned/damaged/lost item available again without an issue event.
+    @discardableResult
+    func markEquipmentAvailable(id: UUID, notes: String? = nil) -> String? {
+        guard let index = data.equipment.firstIndex(where: { $0.id == id }) else {
+            return "Equipment not found."
+        }
+        var item = data.equipment[index]
+        guard item.status != .issued else {
+            return "Return the item before marking it available."
+        }
+        guard item.status != .available else { return nil }
+        item.status = .available
+        item.issuedTo = nil
+        item.history.append(EquipmentEvent(type: .edited, notes: notes ?? "Marked available"))
+        data.equipment[index] = item
+        persist()
+        return nil
+    }
+
+    func deleteEquipment(_ item: EquipmentItem) {
+        data.equipment.removeAll { $0.id == item.id }
+        persist()
+    }
+
     // MARK: - Issue photos
 
     /// Absolute URL of an issue photo on disk. Rebuilt from the relative

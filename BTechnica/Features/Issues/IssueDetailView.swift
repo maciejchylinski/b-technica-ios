@@ -18,12 +18,13 @@ struct IssueDetailView: View {
         store.issue(id: issueId)
     }
 
+    private var drawing: Drawing? {
+        guard let issue else { return nil }
+        return store.data.drawings.first { $0.id == issue.drawingId }
+    }
+
     private var drawingName: String {
-        guard let issue,
-              let drawing = store.data.drawings.first(where: { $0.id == issue.drawingId }) else {
-            return "Unknown drawing"
-        }
-        return drawing.name
+        drawing?.name ?? "Unknown drawing"
     }
 
     var body: some View {
@@ -34,6 +35,12 @@ struct IssueDetailView: View {
                         LabeledContent("Number", value: "#\(issue.number)")
                         LabeledContent("Status", value: issue.status.label)
                         LabeledContent("Drawing", value: drawingName)
+                        if let revision = drawing?.displayRevision {
+                            LabeledContent("Revision", value: revision)
+                        }
+                        if let location = drawing?.displayLocation {
+                            LabeledContent("Location", value: location)
+                        }
                         LabeledContent("Page", value: "\(issue.pageIndex + 1)")
                     }
 

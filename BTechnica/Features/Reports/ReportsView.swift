@@ -129,7 +129,7 @@ struct ReportsView: View {
                             HStack(spacing: 6) {
                                 Text(issue.status.label)
                                 Text("·")
-                                Text(drawingName(for: issue))
+                                Text(drawingLabel(for: issue))
                                 Text("·")
                                 Text("Page \(issue.pageIndex + 1)")
                                 if !issue.photos.isEmpty {
@@ -240,6 +240,14 @@ struct ReportsView: View {
         store.data.drawings.first { $0.id == issue.drawingId }?.name ?? "Unknown drawing"
     }
 
+    private func drawingLabel(for issue: Issue) -> String {
+        store.data.drawings.first { $0.id == issue.drawingId }?.issueReferenceLabel ?? "Unknown drawing"
+    }
+
+    private func drawing(for issue: Issue) -> Drawing? {
+        store.data.drawings.first { $0.id == issue.drawingId }
+    }
+
     private func generateAndShare() {
         guard !isGenerating, !filteredIssues.isEmpty else { return }
         isGenerating = true
@@ -250,12 +258,15 @@ struct ReportsView: View {
         let summary = filterSummary
         let blocks: [IssueReportGenerator.IssueBlock] = filteredIssues.map { issue in
             let photos = issue.photos.compactMap { store.image(for: $0) }
+            let drawing = drawing(for: issue)
             return IssueReportGenerator.IssueBlock(
                 number: issue.number,
                 title: issue.title,
                 details: issue.details,
                 status: issue.status.label,
-                drawingName: drawingName(for: issue),
+                drawingName: drawing?.name ?? "Unknown drawing",
+                drawingRevision: drawing?.displayRevision,
+                drawingLocation: drawing?.displayLocation,
                 pageNumber: issue.pageIndex + 1,
                 photos: photos
             )

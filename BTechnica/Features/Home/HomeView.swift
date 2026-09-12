@@ -7,6 +7,8 @@ struct HomeView: View {
 
     @State private var showingPicker = false
     @State private var importError: String?
+    @State private var detailsDrawingId: UUID?
+    @State private var pendingEditorId: UUID?
 
     private var openIssueCount: Int {
         store.data.issues.filter { $0.status == .open }.count
@@ -73,11 +75,23 @@ struct HomeView: View {
                 }
             }
             .navigationTitle("Home")
-            .sheet(isPresented: $showingPicker) {
+            .sheet(isPresented: $showingPicker, onDismiss: presentPendingEditor) {
                 PDFDocumentPicker { url in
                     handlePicked(url)
+                    showingPicker = false
                 }
                 .ignoresSafeArea()
+            }
+            .sheet(isPresented: Binding(
+                get: { detailsDrawingId != nil },
+                set: { if !$0 { detailsDrawingId = nil } }
+            ), onDismiss: {
+                selectedTab = .drawings
+            }) {
+                if let detailsDrawingId {
+                    DrawingDetailsEditor(drawingId: detailsDrawingId)
+                        .environmentObject(store)
+                }
             }
             .alert("Import failed",
                    isPresented: Binding(get: { importError != nil },
@@ -118,10 +132,18 @@ struct HomeView: View {
 
     private func handlePicked(_ url: URL) {
         do {
-            try store.importDrawing(from: url)
-            selectedTab = .drawings
+            let drawing = try store.importDrawing(from: url)
+            pendingEditorId = drawing.id
         } catch {
             importError = error.localizedDescription
+        }
+    }
+
+    private func presentPendingEditor() {
+        guard let id = pendingEditorId else { return }
+        pendingEditorId = nil
+        DispatchQueue.main.async {
+            detailsDrawingId = id
         }
     }
 }

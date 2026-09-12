@@ -14,6 +14,14 @@ struct Drawing: Codable, Identifiable, Equatable {
     var fileName: String
     var pageCount: Int
     var createdDate: Date
+    /// Optional revision label as printed on the sheet (e.g. "C", "0").
+    var revision: String?
+    /// Optional discipline or drawing type (e.g. Architectural, Electrical).
+    var discipline: String?
+    /// Optional level / location (e.g. "Level 2", "Grid A-B").
+    var location: String?
+    /// Optional date printed on the drawing, if the user recorded one.
+    var drawingDate: Date?
     /// One calibration entry per calibrated page. A drawing counts as
     /// "Calibrated" as soon as at least one page has a calibration.
     var calibrations: [PageCalibration]
@@ -24,6 +32,10 @@ struct Drawing: Codable, Identifiable, Equatable {
          fileName: String,
          pageCount: Int,
          createdDate: Date = Date(),
+         revision: String? = nil,
+         discipline: String? = nil,
+         location: String? = nil,
+         drawingDate: Date? = nil,
          calibrations: [PageCalibration] = []) {
         self.id = id
         self.projectId = projectId
@@ -31,6 +43,10 @@ struct Drawing: Codable, Identifiable, Equatable {
         self.fileName = fileName
         self.pageCount = pageCount
         self.createdDate = createdDate
+        self.revision = revision
+        self.discipline = discipline
+        self.location = location
+        self.drawingDate = drawingDate
         self.calibrations = calibrations
     }
 
@@ -38,7 +54,65 @@ struct Drawing: Codable, Identifiable, Equatable {
 
     var calibrationStatusText: String { isCalibrated ? "Scale set" : "No scale" }
 
+    var displayRevision: String? { Self.nonEmpty(revision) }
+    var displayDiscipline: String? { Self.nonEmpty(discipline) }
+    var displayLocation: String? { Self.nonEmpty(location) }
+
+    /// Name plus revision and location when set — used on issues and reports.
+    var issueReferenceLabel: String {
+        var parts = [name]
+        if let revision = displayRevision {
+            parts.append("Rev \(revision)")
+        }
+        if let location = displayLocation {
+            parts.append(location)
+        }
+        return parts.joined(separator: " · ")
+    }
+
     func calibration(forPage pageIndex: Int) -> PageCalibration? {
         calibrations.first { $0.pageIndex == pageIndex }
+    }
+
+    static func nonEmpty(_ value: String?) -> String? {
+        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    // MARK: - Codable (new metadata keys are optional for older appdata.json)
+
+    private enum CodingKeys: String, CodingKey {
+        case id, projectId, name, fileName, pageCount, createdDate
+        case revision, discipline, location, drawingDate, calibrations
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        projectId = try c.decode(UUID.self, forKey: .projectId)
+        name = try c.decode(String.self, forKey: .name)
+        fileName = try c.decode(String.self, forKey: .fileName)
+        pageCount = try c.decode(Int.self, forKey: .pageCount)
+        createdDate = try c.decodeIfPresent(Date.self, forKey: .createdDate) ?? Date()
+        revision = try c.decodeIfPresent(String.self, forKey: .revision)
+        discipline = try c.decodeIfPresent(String.self, forKey: .discipline)
+        location = try c.decodeIfPresent(String.self, forKey: .location)
+        drawingDate = try c.decodeIfPresent(Date.self, forKey: .drawingDate)
+        calibrations = try c.decodeIfPresent([PageCalibration].self, forKey: .calibrations) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(projectId, forKey: .projectId)
+        try c.encode(name, forKey: .name)
+        try c.encode(fileName, forKey: .fileName)
+        try c.encode(pageCount, forKey: .pageCount)
+        try c.encode(createdDate, forKey: .createdDate)
+        try c.encodeIfPresent(Drawing.nonEmpty(revision), forKey: .revision)
+        try c.encodeIfPresent(Drawing.nonEmpty(discipline), forKey: .discipline)
+        try c.encodeIfPresent(Drawing.nonEmpty(location), forKey: .location)
+        try c.encodeIfPresent(drawingDate, forKey: .drawingDate)
+        try c.encode(calibrations, forKey: .calibrations)
     }
 }

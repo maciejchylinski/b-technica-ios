@@ -134,16 +134,47 @@ final class AppStore: ObservableObject {
         return drawing
     }
 
-    func deleteDrawing(_ drawing: Drawing) {
-        // Remove the copied PDF too so storage doesn't leak.
+    /// Updates name and optional metadata. File, page count and calibrations stay as stored.
+    func updateDrawingDetails(id: UUID,
+                              name: String,
+                              revision: String?,
+                              discipline: String?,
+                              location: String?,
+                              drawingDate: Date?) {
+        guard let index = data.drawings.firstIndex(where: { $0.id == id }) else { return }
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+        data.drawings[index].name = trimmedName
+        data.drawings[index].revision = Drawing.nonEmpty(revision)
+        data.drawings[index].discipline = Drawing.nonEmpty(discipline)
+        data.drawings[index].location = Drawing.nonEmpty(location)
+        data.drawings[index].drawingDate = drawingDate
+        persist()
+    }
+
+    /// Deletes a drawing and its copied PDF.
+    ///
+    /// Drawings that still have issues are blocked unless `confirmingIssueDeletion`
+    /// is true, so issue records and photos are not removed by an accidental swipe.
+    /// - Returns: `nil` on success, or a short reason when delete is blocked.
+    @discardableResult
+    func deleteDrawing(_ drawing: Drawing, confirmingIssueDeletion: Bool = false) -> String? {
+        let relatedIssues = data.issues.filter { $0.drawingId == drawing.id }
+        if !relatedIssues.isEmpty && !confirmingIssueDeletion {
+            let count = relatedIssues.count
+            let noun = count == 1 ? "issue" : "issues"
+            return "This drawing has \(count) \(noun). Deleting it also deletes those \(noun) and their photos."
+        }
+
         let url = fileURL(for: drawing)
         try? fileManager.removeItem(at: url)
-        for photo in data.issues.filter({ $0.drawingId == drawing.id }).flatMap(\.photos) {
+        for photo in relatedIssues.flatMap(\.photos) {
             try? fileManager.removeItem(at: fileURL(for: photo))
         }
         data.drawings.removeAll { $0.id == drawing.id }
         data.issues.removeAll { $0.drawingId == drawing.id }
         persist()
+        return nil
     }
 
     /// Save (or replace) the calibration for a page of a drawing.

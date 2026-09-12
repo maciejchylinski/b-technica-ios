@@ -44,6 +44,7 @@ struct DrawingDetailView: View {
     @State private var previewIssueId: UUID?
     /// Push Issue Detail from the preview card.
     @State private var issueToOpen: Issue?
+    @State private var showDetailsEditor = false
 
     private var drawing: Drawing? {
         store.data.drawings.first { $0.id == drawingId }
@@ -138,6 +139,10 @@ struct DrawingDetailView: View {
                 .presentationDetents([.medium, .large])
             }
         }
+        .sheet(isPresented: $showDetailsEditor) {
+            DrawingDetailsEditor(drawingId: drawing.id)
+                .environmentObject(store)
+        }
     }
 
     // MARK: - Toolbar
@@ -150,6 +155,7 @@ struct DrawingDetailView: View {
                 Button("Add issue") { startPlacingIssue() }
                 Menu {
                     Button("Set scale") { startCalibration() }
+                    Button("Edit drawing details") { showDetailsEditor = true }
                 } label: {
                     Label("More", systemImage: "ellipsis.circle")
                 }

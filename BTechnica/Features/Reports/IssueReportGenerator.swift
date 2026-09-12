@@ -18,6 +18,8 @@ enum IssueReportGenerator {
         var details: String
         var status: String
         var drawingName: String
+        var drawingRevision: String?
+        var drawingLocation: String?
         var pageNumber: Int
         /// Loaded images only; missing files should already be filtered out.
         var photos: [UIImage]
@@ -142,6 +144,12 @@ enum IssueReportGenerator {
 
         y = drawLabeled("Status", value: issue.status, at: y)
         y = drawLabeled("Drawing", value: issue.drawingName, at: y)
+        if let revision = issue.drawingRevision, !revision.isEmpty {
+            y = drawLabeled("Revision", value: revision, at: y)
+        }
+        if let location = issue.drawingLocation, !location.isEmpty {
+            y = drawLabeled("Location", value: location, at: y)
+        }
         y = drawLabeled("Page", value: "\(issue.pageNumber)", at: y)
 
         let details = issue.details.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -287,6 +295,12 @@ enum IssueReportGenerator {
 
     private static func estimatedHeight(for issue: IssueBlock) -> CGFloat {
         var height: CGFloat = 90
+        if let revision = issue.drawingRevision, !revision.isEmpty {
+            height += 20
+        }
+        if let location = issue.drawingLocation, !location.isEmpty {
+            height += 20
+        }
         let details = issue.details.trimmingCharacters(in: .whitespacesAndNewlines)
         if !details.isEmpty {
             height += min(80, CGFloat(details.count / 40) * 14)

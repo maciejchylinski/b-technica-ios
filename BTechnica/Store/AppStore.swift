@@ -186,6 +186,94 @@ final class AppStore: ObservableObject {
         (data.issues.map(\.number).max() ?? 0) + 1
     }
 
+    // MARK: - Contractors dictionary
+
+    @discardableResult
+    func addContractor(name: String, notes: String? = nil) -> Contractor? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let trimmedNotes = notes?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let contractor = Contractor(
+            name: trimmed,
+            notes: (trimmedNotes?.isEmpty == false) ? trimmedNotes : nil
+        )
+        data.contractors.append(contractor)
+        persist()
+        return contractor
+    }
+
+    func updateContractor(_ contractor: Contractor) {
+        guard let index = data.contractors.firstIndex(where: { $0.id == contractor.id }) else { return }
+        let oldName = data.contractors[index].name
+        let trimmed = contractor.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        var updated = contractor
+        updated.name = trimmed
+        let notes = contractor.notes?.trimmingCharacters(in: .whitespacesAndNewlines)
+        updated.notes = (notes?.isEmpty == false) ? notes : nil
+        data.contractors[index] = updated
+        if oldName != trimmed {
+            for i in data.issues.indices where data.issues[i].contractor == oldName {
+                data.issues[i].contractor = trimmed
+            }
+        }
+        persist()
+    }
+
+    /// Deletes a contractor when no issue still references its name.
+    /// - Returns: `nil` on success, or a short reason when delete is blocked.
+    @discardableResult
+    func deleteContractor(_ contractor: Contractor) -> String? {
+        let inUse = data.issues.contains { $0.contractor == contractor.name }
+        if inUse {
+            return "This contractor is used by one or more issues. Remove or change those issues first."
+        }
+        data.contractors.removeAll { $0.id == contractor.id }
+        persist()
+        return nil
+    }
+
+    // MARK: - Disciplines dictionary
+
+    @discardableResult
+    func addDiscipline(name: String) -> Discipline? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let discipline = Discipline(name: trimmed)
+        data.disciplines.append(discipline)
+        persist()
+        return discipline
+    }
+
+    func updateDiscipline(_ discipline: Discipline) {
+        guard let index = data.disciplines.firstIndex(where: { $0.id == discipline.id }) else { return }
+        let oldName = data.disciplines[index].name
+        let trimmed = discipline.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        var updated = discipline
+        updated.name = trimmed
+        data.disciplines[index] = updated
+        if oldName != trimmed {
+            for i in data.issues.indices where data.issues[i].discipline == oldName {
+                data.issues[i].discipline = trimmed
+            }
+        }
+        persist()
+    }
+
+    /// Deletes a discipline when no issue still references its name.
+    /// - Returns: `nil` on success, or a short reason when delete is blocked.
+    @discardableResult
+    func deleteDiscipline(_ discipline: Discipline) -> String? {
+        let inUse = data.issues.contains { $0.discipline == discipline.name }
+        if inUse {
+            return "This discipline is used by one or more issues. Remove or change those issues first."
+        }
+        data.disciplines.removeAll { $0.id == discipline.id }
+        persist()
+        return nil
+    }
+
     // MARK: - Issue photos
 
     /// Absolute URL of an issue photo on disk. Rebuilt from the relative

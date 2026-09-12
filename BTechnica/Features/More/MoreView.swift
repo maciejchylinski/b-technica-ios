@@ -21,6 +21,16 @@ struct MoreView: View {
                         Label("Reports", systemImage: "doc.text")
                     }
                     NavigationLink {
+                        ContractorsView()
+                    } label: {
+                        Label("Contractors", systemImage: "person.2")
+                    }
+                    NavigationLink {
+                        DisciplinesView()
+                    } label: {
+                        Label("Disciplines", systemImage: "tag")
+                    }
+                    NavigationLink {
                         EquipmentView()
                     } label: {
                         Label("Equipment", systemImage: "shippingbox")

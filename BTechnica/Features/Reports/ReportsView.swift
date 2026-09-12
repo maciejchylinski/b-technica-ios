@@ -188,11 +188,15 @@ struct ReportsView: View {
     }
 
     private var contractorNames: [String] {
-        uniqueNonEmptyValues(store.data.issues.map(\.contractor))
+        let fromIssues = store.data.issues.map(\.contractor)
+        let fromDictionary = store.data.contractors.map { Optional($0.name) }
+        return uniqueNonEmptyValues(fromIssues + fromDictionary)
     }
 
     private var disciplineNames: [String] {
-        uniqueNonEmptyValues(store.data.issues.map(\.discipline))
+        let fromIssues = store.data.issues.map(\.discipline)
+        let fromDictionary = store.data.disciplines.map { Optional($0.name) }
+        return uniqueNonEmptyValues(fromIssues + fromDictionary)
     }
 
     private func statusMatches(_ issue: Issue) -> Bool {

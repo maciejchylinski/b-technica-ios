@@ -28,7 +28,7 @@ enum IssueStatus: String, Codable, CaseIterable, Identifiable, Hashable {
 /// Photos are stored as metadata here; image bytes live as files under
 /// Documents/IssuePhotos/. Future additions (not in this slice):
 ///  - assignee, due date, comments / activity log,
-///  - sync / reports.
+///  - sync.
 struct Issue: Codable, Identifiable, Equatable, Hashable {
     var id: UUID
     var drawingId: UUID

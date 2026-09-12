@@ -50,6 +50,11 @@ struct HomeView: View {
                     } label: {
                         shortcutRow(icon: "exclamationmark.bubble", title: "Open issues")
                     }
+                    NavigationLink {
+                        ReportsView()
+                    } label: {
+                        shortcutRow(icon: "doc.text", title: "Issue report")
+                    }
                 }
 
                 Section("Overview") {

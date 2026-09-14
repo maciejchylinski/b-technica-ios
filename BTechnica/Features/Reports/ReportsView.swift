@@ -56,13 +56,8 @@ struct ReportsView: View {
             Section {
                 Picker("Status", selection: $statusFilter) {
                     Text("All").tag(StatusFilter.all)
-                    Text(IssueStatus.open.label).tag(StatusFilter.status(.open))
-                    Text(IssueStatus.inProgress.label).tag(StatusFilter.status(.inProgress))
-                    if statusOptions.contains(.resolved) {
-                        Text(IssueStatus.resolved.label).tag(StatusFilter.status(.resolved))
-                    }
-                    if statusOptions.contains(.closed) {
-                        Text(IssueStatus.closed.label).tag(StatusFilter.status(.closed))
+                    ForEach(IssueStatus.allCases) { status in
+                        Text(status.label).tag(StatusFilter.status(status))
                     }
                 }
 
@@ -174,10 +169,6 @@ struct ReportsView: View {
         } message: {
             Text(errorMessage ?? "")
         }
-    }
-
-    private var statusOptions: Set<IssueStatus> {
-        Set(store.data.issues.map(\.status))
     }
 
     private var drawingsInIssues: [Drawing] {

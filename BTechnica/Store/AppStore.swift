@@ -204,6 +204,35 @@ final class AppStore: ObservableObject {
         persist()
     }
 
+    /// Updates editable issue fields. Pin coordinates, number and photos stay as stored.
+    func updateIssueDetails(id: UUID,
+                            title: String,
+                            details: String,
+                            status: IssueStatus,
+                            discipline: String?,
+                            contractor: String?) {
+        guard let index = data.issues.firstIndex(where: { $0.id == id }) else { return }
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else { return }
+        data.issues[index].title = trimmedTitle
+        data.issues[index].details = details.trimmingCharacters(in: .whitespacesAndNewlines)
+        data.issues[index].status = status
+        let trimmedDiscipline = discipline?.trimmingCharacters(in: .whitespacesAndNewlines)
+        data.issues[index].discipline = (trimmedDiscipline?.isEmpty == false) ? trimmedDiscipline : nil
+        let trimmedContractor = contractor?.trimmingCharacters(in: .whitespacesAndNewlines)
+        data.issues[index].contractor = (trimmedContractor?.isEmpty == false) ? trimmedContractor : nil
+        persist()
+    }
+
+    /// Removes an issue, its pin data, and linked photo files on disk.
+    func deleteIssue(_ issue: Issue) {
+        for photo in issue.photos {
+            try? fileManager.removeItem(at: fileURL(for: photo))
+        }
+        data.issues.removeAll { $0.id == issue.id }
+        persist()
+    }
+
     func issue(id: UUID) -> Issue? {
         data.issues.first { $0.id == id }
     }
@@ -526,6 +555,14 @@ final class AppStore: ObservableObject {
         data.issues[index].photos.append(photo)
         persist()
         return photo
+    }
+
+    /// Deletes a photo file and removes its metadata from the issue.
+    func deletePhoto(_ photo: IssuePhoto, from issueId: UUID) {
+        guard let index = data.issues.firstIndex(where: { $0.id == issueId }) else { return }
+        try? fileManager.removeItem(at: fileURL(for: photo))
+        data.issues[index].photos.removeAll { $0.id == photo.id }
+        persist()
     }
 
     // MARK: - Persistence

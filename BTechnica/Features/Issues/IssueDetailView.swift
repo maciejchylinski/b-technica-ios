@@ -5,8 +5,12 @@ import UniformTypeIdentifiers
 /// Full issue detail screen opened from a pin preview or the Issues list.
 struct IssueDetailView: View {
     @EnvironmentObject private var store: AppStore
+    @Environment(\.dismiss) private var dismiss
     let issueId: UUID
 
+    @State private var showEditor = false
+    @State private var showDeleteIssueConfirm = false
+    @State private var pendingPhotoDelete: IssuePhoto?
     @State private var showAddPhotoOptions = false
     @State private var showCamera = false
     @State private var showCameraUnavailable = false
@@ -57,27 +61,38 @@ struct IssueDetailView: View {
 
                     photosSection(issue)
 
-                    if issue.discipline != nil || issue.contractor != nil {
-                        Section("Classification") {
-                            if let discipline = issue.discipline, !discipline.isEmpty {
-                                LabeledContent("Discipline", value: discipline)
-                            }
-                            if let contractor = issue.contractor, !contractor.isEmpty {
-                                LabeledContent("Contractor", value: contractor)
-                            }
-                        }
+                    Section("Classification") {
+                        LabeledContent("Discipline", value: nonEmptyLabel(issue.discipline))
+                        LabeledContent("Contractor", value: nonEmptyLabel(issue.contractor))
                     }
 
                     Section {
                         LabeledContent("Created", value: issue.createdDate.formatted(date: .abbreviated, time: .shortened))
                     }
+
+                    Section {
+                        Button("Delete issue", role: .destructive) {
+                            showDeleteIssueConfirm = true
+                        }
+                    }
                 }
+                .listStyle(.insetGrouped)
                 .navigationTitle(issue.title)
                 .navigationBarTitleDisplayMode(.inline)
             } else {
                 ContentUnavailableView("Issue unavailable",
                                        systemImage: "exclamationmark.bubble")
             }
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("Edit") { showEditor = true }
+                    .disabled(issue == nil)
+            }
+        }
+        .sheet(isPresented: $showEditor) {
+            IssueEditor(issueId: issueId)
+                .environmentObject(store)
         }
         .confirmationDialog("Add photo", isPresented: $showAddPhotoOptions, titleVisibility: .visible) {
             Button("Camera") { openCamera() }
@@ -100,14 +115,46 @@ struct IssueDetailView: View {
             .ignoresSafeArea()
         }
         .fullScreenCover(item: $previewPhoto) { photo in
-            IssuePhotoPreviewView(image: store.image(for: photo)) {
-                previewPhoto = nil
-            }
+            IssuePhotoPreviewView(
+                image: store.image(for: photo),
+                onClose: { previewPhoto = nil },
+                onDelete: {
+                    previewPhoto = nil
+                    pendingPhotoDelete = photo
+                }
+            )
         }
         .alert("Camera unavailable", isPresented: $showCameraUnavailable) {
             Button("OK", role: .cancel) {}
         } message: {
             Text("This device or simulator does not have a camera. Choose Photo Library instead.")
+        }
+        .alert("Delete issue?", isPresented: $showDeleteIssueConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete issue", role: .destructive) {
+                deleteIssue()
+            }
+        } message: {
+            let count = issue?.photos.count ?? 0
+            if count == 0 {
+                Text("This removes the issue and its pin from the drawing. This cannot be undone.")
+            } else {
+                let noun = count == 1 ? "photo" : "photos"
+                Text("This removes the issue, its pin, and \(count) linked \(noun). This cannot be undone.")
+            }
+        }
+        .alert("Delete photo?",
+               isPresented: Binding(get: { pendingPhotoDelete != nil },
+                                    set: { if !$0 { pendingPhotoDelete = nil } })) {
+            Button("Cancel", role: .cancel) { pendingPhotoDelete = nil }
+            Button("Delete photo", role: .destructive) {
+                if let pendingPhotoDelete {
+                    store.deletePhoto(pendingPhotoDelete, from: issueId)
+                }
+                self.pendingPhotoDelete = nil
+            }
+        } message: {
+            Text("This removes the photo from the issue and deletes the local file. This cannot be undone.")
         }
     }
 
@@ -127,6 +174,18 @@ struct IssueDetailView: View {
                                 IssuePhotoThumbnail(image: store.image(for: photo))
                             }
                             .buttonStyle(.plain)
+                            .contextMenu {
+                                Button {
+                                    previewPhoto = photo
+                                } label: {
+                                    Label("View", systemImage: "eye")
+                                }
+                                Button(role: .destructive) {
+                                    pendingPhotoDelete = photo
+                                } label: {
+                                    Label("Delete photo", systemImage: "trash")
+                                }
+                            }
                         }
                     }
                     .padding(.vertical, 4)
@@ -139,6 +198,17 @@ struct IssueDetailView: View {
                 Label("Add photo", systemImage: "photo.badge.plus")
             }
         }
+    }
+
+    private func nonEmptyLabel(_ value: String?) -> String {
+        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? "None" : trimmed
+    }
+
+    private func deleteIssue() {
+        guard let issue else { return }
+        store.deleteIssue(issue)
+        dismiss()
     }
 
     private func openCamera() {
@@ -204,6 +274,7 @@ private struct IssuePhotoThumbnail: View {
 private struct IssuePhotoPreviewView: View {
     let image: UIImage?
     var onClose: () -> Void
+    var onDelete: () -> Void
 
     var body: some View {
         NavigationStack {
@@ -223,6 +294,9 @@ private struct IssuePhotoPreviewView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { onClose() }
+                }
+                ToolbarItem(placement: .destructiveAction) {
+                    Button("Delete", role: .destructive) { onDelete() }
                 }
             }
             .toolbarColorScheme(.dark, for: .navigationBar)

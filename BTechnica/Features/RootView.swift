@@ -9,26 +9,55 @@ enum AppTab: Hashable {
 /// The drawing/PDF is the centre of the product, so Drawings sits front of mind
 /// right next to Home.
 struct RootView: View {
+    @EnvironmentObject private var store: AppStore
     @State private var selectedTab: AppTab = .home
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            HomeView(selectedTab: $selectedTab)
-                .tabItem { Label("Home", systemImage: "house") }
-                .tag(AppTab.home)
+        VStack(spacing: 0) {
+            if let message = store.storageError {
+                storageErrorBanner(message)
+            }
 
-            DrawingsListView()
-                .tabItem { Label("Drawings", systemImage: "doc.richtext") }
-                .tag(AppTab.drawings)
+            TabView(selection: $selectedTab) {
+                HomeView(selectedTab: $selectedTab)
+                    .tabItem { Label("Home", systemImage: "house") }
+                    .tag(AppTab.home)
 
-            IssuesView()
-                .tabItem { Label("Issues", systemImage: "exclamationmark.bubble") }
-                .tag(AppTab.issues)
+                DrawingsListView()
+                    .tabItem { Label("Drawings", systemImage: "doc.richtext") }
+                    .tag(AppTab.drawings)
 
-            MoreView()
-                .tabItem { Label("More", systemImage: "ellipsis") }
-                .tag(AppTab.more)
+                IssuesView()
+                    .tabItem { Label("Issues", systemImage: "exclamationmark.bubble") }
+                    .tag(AppTab.issues)
+
+                MoreView()
+                    .tabItem { Label("More", systemImage: "ellipsis") }
+                    .tag(AppTab.more)
+            }
         }
+    }
+
+    private func storageErrorBanner(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.white)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button {
+                store.dismissStorageError()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.white.opacity(0.9))
+            }
+            .accessibilityLabel("Dismiss")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color.orange.opacity(0.95))
+        .accessibilityIdentifier("storageErrorBanner")
     }
 }
 

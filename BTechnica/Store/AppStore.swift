@@ -16,12 +16,21 @@ import UIKit
 @MainActor
 final class AppStore: ObservableObject {
     @Published private(set) var data: AppData
+    /// User-visible local storage problem (load or save). Cleared on successful save.
+    @Published private(set) var storageError: String?
 
     private let fileManager = FileManager.default
+    /// When true, the on-disk `appdata.json` is corrupt/untrusted — do not promote it to last-good.
+    private var storeFileUntrusted = false
 
     /// Documents/appdata.json
     private var storeURL: URL {
         documentsURL.appendingPathComponent("appdata.json")
+    }
+
+    /// Documents/appdata-last-good.json — last successful write.
+    private var lastGoodURL: URL {
+        documentsURL.appendingPathComponent("appdata-last-good.json")
     }
 
     /// Documents/ (app sandbox, backed up, user-visible via Files if enabled).
@@ -47,24 +56,66 @@ final class AppStore: ObservableObject {
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         }
 
-        // Load existing data or seed a default project.
-        let url = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("appdata.json")
-        if let loaded = AppStore.load(from: url) {
-            let (normalized, didMigrate) = AppStore.normalized(loaded)
-            self.data = normalized
-            if didMigrate {
-                // Write back migrated numbers / field names so the next launch is clean.
-                // persist() needs self; call after assignment via a local encode.
-                Self.write(normalized, to: url)
-            }
-        } else {
+        let url = docs.appendingPathComponent("appdata.json")
+        switch Self.loadResult(from: url) {
+        case .missing:
             self.data = AppData(project: Project(name: "Default Project"))
+            self.storageError = nil
+            self.storeFileUntrusted = false
+
+        case .loaded(let loaded):
+            let (migrated, didChange) = Self.migrate(loaded)
+            self.data = migrated
+            self.storageError = nil
+            self.storeFileUntrusted = false
+            if didChange {
+                // Write back schema / legacy fixes so the next launch is clean.
+                // Uses the same path as normal saves (last-good + atomic write).
+                self.persist(clearingLoadError: false)
+            }
+
+        case .corrupt:
+            // Preserve bytes, do not overwrite appdata.json on init.
+            _ = Self.preserveCorruptStore(at: url, documentsURL: docs)
+            self.data = AppData(project: Project(name: "Default Project"))
+            self.storageError = "Local data could not be loaded"
+            self.storeFileUntrusted = true
         }
     }
 
+    /// Dismisses the in-app storage error banner (does not fix the underlying problem).
+    func dismissStorageError() {
+        storageError = nil
+    }
+
+    // MARK: - Migration
+
+    /// Applies schema and legacy field migrations. Returns whether on-disk rewrite is needed.
+    private static func migrate(_ data: AppData) -> (AppData, Bool) {
+        var copy = data
+        var changed = false
+
+        // v0 → v1: introduce schemaVersion; all existing fields already decode.
+        if copy.schemaVersion < 1 {
+            copy.schemaVersion = 1
+            changed = true
+        }
+
+        // Keep schemaVersion from drifting above what this build writes.
+        if copy.schemaVersion > AppDataSchema.current {
+            // Unknown future schema: keep data as decoded; do not rewrite.
+            // (Decode may have dropped unknown keys — acceptable for this slice.)
+        } else if copy.schemaVersion != AppDataSchema.current {
+            copy.schemaVersion = AppDataSchema.current
+            changed = true
+        }
+
+        let (normalized, didNormalize) = Self.normalizedIssueNumbers(copy)
+        return (normalized, changed || didNormalize)
+    }
+
     /// Assign sequential numbers to any legacy issues that loaded with `number == 0`.
-    private static func normalized(_ data: AppData) -> (AppData, Bool) {
+    private static func normalizedIssueNumbers(_ data: AppData) -> (AppData, Bool) {
         var copy = data
         guard copy.issues.contains(where: { $0.number <= 0 }) else { return (copy, false) }
 
@@ -76,17 +127,6 @@ final class AppStore: ObservableObject {
             next += 1
         }
         return (copy, true)
-    }
-
-    private static func write(_ data: AppData, to url: URL) {
-        do {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            encoder.dateEncodingStrategy = .iso8601
-            try encoder.encode(data).write(to: url, options: [.atomic])
-        } catch {
-            print("[AppStore] Failed to persist migrated data: \(error)")
-        }
     }
 
     // MARK: - File helpers
@@ -568,21 +608,76 @@ final class AppStore: ObservableObject {
     // MARK: - Persistence
 
     private func persist() {
+        persist(clearingLoadError: true)
+    }
+
+    /// Writes `data` atomically. Copies the previous `appdata.json` to
+    /// `appdata-last-good.json` first when present.
+    private func persist(clearingLoadError: Bool) {
         do {
+            if !storeFileUntrusted, fileManager.fileExists(atPath: storeURL.path) {
+                // Best-effort last-good snapshot before overwrite.
+                try? fileManager.removeItem(at: lastGoodURL)
+                try? fileManager.copyItem(at: storeURL, to: lastGoodURL)
+            }
+
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             encoder.dateEncodingStrategy = .iso8601
             let encoded = try encoder.encode(data)
             try encoded.write(to: storeURL, options: [.atomic])
+            storeFileUntrusted = false
+            // Successful write clears save errors; also clears a prior load error once
+            // new valid data has replaced an untrusted file (clearingLoadError == true).
+            if clearingLoadError {
+                storageError = nil
+            } else if storageError == "Local data could not be saved" {
+                storageError = nil
+            }
         } catch {
             print("[AppStore] Failed to persist data: \(error)")
+            storageError = "Local data could not be saved"
         }
     }
 
-    private static func load(from url: URL) -> AppData? {
-        guard let raw = try? Data(contentsOf: url) else { return nil }
+    private enum LoadResult {
+        case missing
+        case loaded(AppData)
+        case corrupt
+    }
+
+    private static func loadResult(from url: URL) -> LoadResult {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: url.path) else { return .missing }
+        guard let raw = try? Data(contentsOf: url) else { return .corrupt }
+
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return try? decoder.decode(AppData.self, from: raw)
+        do {
+            let decoded = try decoder.decode(AppData.self, from: raw)
+            return .loaded(decoded)
+        } catch {
+            print("[AppStore] Failed to decode appdata.json: \(error)")
+            return .corrupt
+        }
+    }
+
+    /// Copies a corrupt store aside. Does not delete or overwrite the original.
+    @discardableResult
+    private static func preserveCorruptStore(at url: URL, documentsURL: URL) -> URL? {
+        let stamp = ISO8601DateFormatter().string(from: Date())
+            .replacingOccurrences(of: ":", with: "-")
+        let destination = documentsURL
+            .appendingPathComponent("appdata-corrupt-\(stamp).json")
+        do {
+            if FileManager.default.fileExists(atPath: destination.path) {
+                try FileManager.default.removeItem(at: destination)
+            }
+            try FileManager.default.copyItem(at: url, to: destination)
+            return destination
+        } catch {
+            print("[AppStore] Failed to preserve corrupt appdata: \(error)")
+            return nil
+        }
     }
 }

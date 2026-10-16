@@ -1,14 +1,16 @@
+import PhotosUI
 import SwiftUI
+import UniformTypeIdentifiers
 
-/// Simple form for creating (or editing basics of) an issue after the user
-/// tapped a point on the PDF.
+/// Simple form for creating an issue after the user tapped a point on the PDF.
+/// Photos stay in memory until Save; Cancel leaves no orphan files on disk.
 struct IssueFormView: View {
     @EnvironmentObject private var store: AppStore
 
     let pageIndex: Int
     let pageCount: Int
     let point: PDFPoint
-    var onSave: (String, String, String?, String?) -> Void
+    var onSave: (String, String, String?, String?, [UIImage]) -> Void
     var onCancel: () -> Void
 
     @State private var title: String = ""
@@ -21,6 +23,13 @@ struct IssueFormView: View {
     @State private var showAddContractor = false
     @State private var newDisciplineName = ""
     @State private var newContractorName = ""
+
+    @State private var pendingPhotos: [PendingFormPhoto] = []
+    @State private var showAddPhotoOptions = false
+    @State private var showCamera = false
+    @State private var showCameraUnavailable = false
+    @State private var showLibraryPicker = false
+    @State private var libraryItem: PhotosPickerItem?
 
     private var canSave: Bool {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -54,6 +63,47 @@ struct IssueFormView: View {
                     } else {
                         Text("Status defaults to Open. The pin is saved on this drawing.")
                     }
+                }
+
+                Section {
+                    if pendingPhotos.isEmpty {
+                        Text("No photos yet")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ForEach(pendingPhotos) { item in
+                                    ZStack(alignment: .topTrailing) {
+                                        Image(uiImage: item.image)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 72, height: 72)
+                                            .clipped()
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                        Button {
+                                            pendingPhotos.removeAll { $0.id == item.id }
+                                        } label: {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .symbolRenderingMode(.palette)
+                                                .foregroundStyle(.white, .black.opacity(0.55))
+                                        }
+                                        .offset(x: 4, y: -4)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+
+                    Button {
+                        showAddPhotoOptions = true
+                    } label: {
+                        Label("Add photo", systemImage: "photo.badge.plus")
+                    }
+                } header: {
+                    Text("Photos")
+                } footer: {
+                    Text("Photos are saved with the issue. Cancel discards them.")
                 }
 
                 Section {
@@ -120,6 +170,31 @@ struct IssueFormView: View {
                         .fontWeight(.semibold)
                 }
             }
+            .confirmationDialog("Add photo", isPresented: $showAddPhotoOptions, titleVisibility: .visible) {
+                Button("Camera") { openCamera() }
+                Button("Photo Library") { showLibraryPicker = true }
+                Button("Cancel", role: .cancel) {}
+            }
+            .photosPicker(isPresented: $showLibraryPicker,
+                          selection: $libraryItem,
+                          matching: .images)
+            .onChange(of: libraryItem) { _, newItem in
+                Task { await importLibraryPhoto(newItem) }
+            }
+            .fullScreenCover(isPresented: $showCamera) {
+                CameraPicker { image in
+                    showCamera = false
+                    pendingPhotos.append(PendingFormPhoto(image: image))
+                } onCancel: {
+                    showCamera = false
+                }
+                .ignoresSafeArea()
+            }
+            .alert("Camera unavailable", isPresented: $showCameraUnavailable) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("This device cannot take photos. Use the photo library instead.")
+            }
             .alert("Add discipline", isPresented: $showAddDiscipline) {
                 TextField("Name", text: $newDisciplineName)
                 Button("Cancel", role: .cancel) {}
@@ -150,6 +225,45 @@ struct IssueFormView: View {
         let trimmedDetails = details.trimmingCharacters(in: .whitespacesAndNewlines)
         let discipline = selectedDisciplineName.isEmpty ? nil : selectedDisciplineName
         let contractor = selectedContractorName.isEmpty ? nil : selectedContractorName
-        onSave(trimmedTitle, trimmedDetails, discipline, contractor)
+        let images = pendingPhotos.map(\.image)
+        onSave(trimmedTitle, trimmedDetails, discipline, contractor, images)
+    }
+
+    private func openCamera() {
+        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+            showCamera = true
+        } else {
+            showCameraUnavailable = true
+        }
+    }
+
+    private func importLibraryPhoto(_ item: PhotosPickerItem?) async {
+        guard let item else { return }
+        defer { libraryItem = nil }
+        do {
+            let picked = try await item.loadTransferable(type: FormPickedImage.self)
+            guard let image = picked?.image else { return }
+            pendingPhotos.append(PendingFormPhoto(image: image))
+        } catch {
+            print("[IssueForm] Failed to import library photo: \(error)")
+        }
+    }
+}
+
+private struct PendingFormPhoto: Identifiable {
+    let id = UUID()
+    let image: UIImage
+}
+
+private struct FormPickedImage: Transferable {
+    let image: UIImage
+
+    static var transferRepresentation: some TransferRepresentation {
+        DataRepresentation(importedContentType: .image) { data in
+            guard let image = UIImage(data: data) else {
+                throw CocoaError(.fileReadCorruptFile)
+            }
+            return FormPickedImage(image: image)
+        }
     }
 }

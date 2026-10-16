@@ -180,7 +180,8 @@ struct PDFKitView: UIViewRepresentable {
 
         /// Returns the id of the nearest labelled marker within hit radius, if any.
         private func hitTest(pageIndex: Int, point: PDFPoint, page: PDFPage) -> UUID? {
-            let radius = markerRadius(for: page) * 2.5
+            // Visual pins are small; keep a larger, comfortable tap target.
+            let radius = max(markerRadius(for: page) * 3.5, 14)
             let radiusSq = radius * radius
             var best: (UUID, CGFloat)?
 
@@ -270,7 +271,9 @@ struct PDFKitView: UIViewRepresentable {
 
         private func markerRadius(for page: PDFPage) -> CGFloat {
             let bounds = page.bounds(for: .mediaBox)
-            return max(8, min(bounds.width, bounds.height) * 0.014)
+            let side = min(bounds.width, bounds.height)
+            // ~0.28% of page, hard-capped — large CAD media boxes must not yield huge pins.
+            return max(4.5, min(9, side * 0.0028))
         }
     }
 }
@@ -293,10 +296,20 @@ final class NumberedPinAnnotation: PDFAnnotation {
     }
 
     override func draw(with box: PDFDisplayBox, in context: CGContext) {
+        // PDF annotation contexts use PDF page space (origin bottom-left, Y up).
+        // UIKit text drawing expects UIKit space (origin top-left, Y down), so without
+        // a flip the numbers render upside-down. Circle + label are drawn in a local
+        // flipped space; annotation `bounds` (pin position) stay unchanged.
+        context.saveGState()
+        defer { context.restoreGState() }
+
+        context.translateBy(x: bounds.origin.x, y: bounds.origin.y + bounds.size.height)
+        context.scaleBy(x: 1, y: -1)
+
         UIGraphicsPushContext(context)
         defer { UIGraphicsPopContext() }
 
-        let rect = bounds
+        let rect = CGRect(origin: .zero, size: bounds.size)
         let path = UIBezierPath(ovalIn: rect.insetBy(dx: 0.5, dy: 0.5))
         fillColor.setFill()
         path.fill()
@@ -315,8 +328,8 @@ final class NumberedPinAnnotation: PDFAnnotation {
         let text = numberText as NSString
         let textSize = text.size(withAttributes: attrs)
         let textRect = CGRect(
-            x: rect.midX - textSize.width / 2,
-            y: rect.midY - textSize.height / 2,
+            x: (rect.width - textSize.width) / 2,
+            y: (rect.height - textSize.height) / 2,
             width: textSize.width,
             height: textSize.height
         )

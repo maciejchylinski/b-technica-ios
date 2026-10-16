@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Opens an imported PDF drawing and hosts scale calibration + issue placement.
 ///
@@ -127,11 +128,12 @@ struct DrawingDetailView: View {
             }
         }) {
             if let pending = pendingPlacement {
-                IssueFormView(pageIndex: pending.page, pageCount: drawing.pageCount, point: pending.point) { title, details, discipline, contractor in
+                IssueFormView(pageIndex: pending.page, pageCount: drawing.pageCount, point: pending.point) { title, details, discipline, contractor, photos in
                     saveIssue(title: title,
                               details: details,
                               discipline: discipline,
                               contractor: contractor,
+                              photos: photos,
                               for: drawing)
                 } onCancel: {
                     showIssueForm = false
@@ -300,6 +302,7 @@ struct DrawingDetailView: View {
                            details: String,
                            discipline: String?,
                            contractor: String?,
+                           photos: [UIImage] = [],
                            for drawing: Drawing) {
         guard let pending = pendingPlacement else { return }
         let issue = Issue(drawingId: drawing.id,
@@ -312,6 +315,9 @@ struct DrawingDetailView: View {
                           discipline: discipline,
                           contractor: contractor)
         store.addIssue(issue)
+        for image in photos {
+            _ = store.addPhoto(from: image, to: issue.id)
+        }
         pendingPlacement = nil
         showIssueForm = false
         mode = .idle

@@ -125,8 +125,10 @@ struct ReportsView: View {
                                 Text(issue.status.label)
                                 Text("·")
                                 Text(drawingLabel(for: issue))
-                                Text("·")
-                                Text("Page \(issue.pageIndex + 1)")
+                                if let pageLabel = drawing(for: issue)?.pageLabel(for: issue.pageIndex) {
+                                    Text("·")
+                                    Text(pageLabel)
+                                }
                                 if !issue.photos.isEmpty {
                                     Text("·")
                                     Label("\(issue.photos.count)", systemImage: "photo")
@@ -258,7 +260,10 @@ struct ReportsView: View {
                 drawingName: drawing?.name ?? "Unknown drawing",
                 drawingRevision: drawing?.displayRevision,
                 drawingLocation: drawing?.displayLocation,
+                contractor: issue.contractor,
+                discipline: issue.discipline,
                 pageNumber: issue.pageIndex + 1,
+                drawingPageCount: drawing?.pageCount ?? 1,
                 photos: photos
             )
         }

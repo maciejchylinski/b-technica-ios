@@ -45,7 +45,9 @@ struct IssueDetailView: View {
                         if let location = drawing?.displayLocation {
                             LabeledContent("Location", value: location)
                         }
-                        LabeledContent("Page", value: "\(issue.pageIndex + 1)")
+                        if drawing?.isMultiPage == true {
+                            LabeledContent("Page", value: "\(issue.pageIndex + 1)")
+                        }
                     }
 
                     Section("Details") {

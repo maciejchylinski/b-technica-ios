@@ -127,7 +127,7 @@ struct DrawingDetailView: View {
             }
         }) {
             if let pending = pendingPlacement {
-                IssueFormView(pageIndex: pending.page, point: pending.point) { title, details, discipline, contractor in
+                IssueFormView(pageIndex: pending.page, pageCount: drawing.pageCount, point: pending.point) { title, details, discipline, contractor in
                     saveIssue(title: title,
                               details: details,
                               discipline: discipline,

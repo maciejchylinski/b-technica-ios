@@ -52,6 +52,14 @@ struct Drawing: Codable, Identifiable, Equatable {
 
     var isCalibrated: Bool { !calibrations.isEmpty }
 
+    var isMultiPage: Bool { pageCount > 1 }
+
+    /// User-facing page label; nil for single-page drawings (Page 1 is implied).
+    func pageLabel(for pageIndex: Int) -> String? {
+        guard isMultiPage else { return nil }
+        return "Page \(pageIndex + 1)"
+    }
+
     var calibrationStatusText: String { isCalibrated ? "Scale set" : "No scale" }
 
     var displayRevision: String? { Self.nonEmpty(revision) }

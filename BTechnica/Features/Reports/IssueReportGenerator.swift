@@ -20,7 +20,10 @@ enum IssueReportGenerator {
         var drawingName: String
         var drawingRevision: String?
         var drawingLocation: String?
+        var contractor: String?
+        var discipline: String?
         var pageNumber: Int
+        var drawingPageCount: Int
         /// Loaded images only; missing files should already be filtered out.
         var photos: [UIImage]
     }
@@ -150,7 +153,15 @@ enum IssueReportGenerator {
         if let location = issue.drawingLocation, !location.isEmpty {
             y = drawLabeled("Location", value: location, at: y)
         }
-        y = drawLabeled("Page", value: "\(issue.pageNumber)", at: y)
+        if let discipline = issue.discipline, !discipline.isEmpty {
+            y = drawLabeled("Discipline", value: discipline, at: y)
+        }
+        if let contractor = issue.contractor, !contractor.isEmpty {
+            y = drawLabeled("Contractor", value: contractor, at: y)
+        }
+        if issue.drawingPageCount > 1 {
+            y = drawLabeled("Page", value: "\(issue.pageNumber)", at: y)
+        }
 
         let details = issue.details.trimmingCharacters(in: .whitespacesAndNewlines)
         if details.isEmpty {
@@ -299,6 +310,15 @@ enum IssueReportGenerator {
             height += 20
         }
         if let location = issue.drawingLocation, !location.isEmpty {
+            height += 20
+        }
+        if let discipline = issue.discipline, !discipline.isEmpty {
+            height += 20
+        }
+        if let contractor = issue.contractor, !contractor.isEmpty {
+            height += 20
+        }
+        if issue.drawingPageCount > 1 {
             height += 20
         }
         let details = issue.details.trimmingCharacters(in: .whitespacesAndNewlines)

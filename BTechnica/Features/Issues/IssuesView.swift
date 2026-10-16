@@ -32,7 +32,8 @@ struct IssuesView: View {
             ForEach(sortedIssues) { issue in
                 NavigationLink(value: issue) {
                     IssueRow(issue: issue,
-                             drawingName: drawingName(for: issue))
+                             drawingName: drawingName(for: issue),
+                             pageLabel: pageLabel(for: issue))
                 }
             }
         }
@@ -50,12 +51,17 @@ struct IssuesView: View {
     private func drawingName(for issue: Issue) -> String {
         store.data.drawings.first { $0.id == issue.drawingId }?.name ?? "Unknown drawing"
     }
+
+    private func pageLabel(for issue: Issue) -> String? {
+        store.data.drawings.first { $0.id == issue.drawingId }?.pageLabel(for: issue.pageIndex)
+    }
 }
 
 /// One row in the Issues list.
 private struct IssueRow: View {
     let issue: Issue
     let drawingName: String
+    let pageLabel: String?
 
     var body: some View {
         HStack(spacing: 14) {
@@ -77,6 +83,10 @@ private struct IssueRow: View {
                     Text("·")
                     Text(drawingName)
                         .lineLimit(1)
+                    if let pageLabel {
+                        Text("·")
+                        Text(pageLabel)
+                    }
                     if !issue.photos.isEmpty {
                         Text("·")
                         Label("\(issue.photos.count)", systemImage: "photo")

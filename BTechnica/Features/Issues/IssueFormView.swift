@@ -6,6 +6,7 @@ struct IssueFormView: View {
     @EnvironmentObject private var store: AppStore
 
     let pageIndex: Int
+    let pageCount: Int
     let point: PDFPoint
     var onSave: (String, String, String?, String?) -> Void
     var onCancel: () -> Void
@@ -48,7 +49,11 @@ struct IssueFormView: View {
                 } header: {
                     Text("Issue")
                 } footer: {
-                    Text("Status defaults to Open. The pin is saved on page \(pageIndex + 1) of the drawing.")
+                    if pageCount > 1 {
+                        Text("Status defaults to Open. The pin is saved on page \(pageIndex + 1) of the drawing.")
+                    } else {
+                        Text("Status defaults to Open. The pin is saved on this drawing.")
+                    }
                 }
 
                 Section {

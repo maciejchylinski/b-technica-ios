@@ -7,6 +7,7 @@ struct HomeView: View {
 
     @State private var showingPicker = false
     @State private var importError: String?
+    @State private var multiPageNotice: String?
     @State private var detailsDrawingId: UUID?
     @State private var pendingEditorId: UUID?
 
@@ -100,6 +101,13 @@ struct HomeView: View {
             } message: {
                 Text(importError ?? "")
             }
+            .alert(DrawingImportNotice.multiPageTitle,
+                   isPresented: Binding(get: { multiPageNotice != nil },
+                                        set: { if !$0 { multiPageNotice = nil } })) {
+                Button("OK", role: .cancel) { multiPageNotice = nil }
+            } message: {
+                Text(multiPageNotice ?? "")
+            }
         }
     }
 
@@ -131,11 +139,18 @@ struct HomeView: View {
     }
 
     private func handlePicked(_ url: URL) {
-        do {
-            let drawing = try store.importDrawing(from: url)
-            pendingEditorId = drawing.id
-        } catch {
-            importError = error.localizedDescription
+        Task { @MainActor in
+            do {
+                let drawing = try await store.importDrawing(from: url)
+                if drawing.isMultiPage {
+                    multiPageNotice = DrawingImportNotice.multiPageMessage
+                }
+                pendingEditorId = drawing.id
+                // Import is async; picker may already have dismissed.
+                presentPendingEditor()
+            } catch {
+                importError = error.localizedDescription
+            }
         }
     }
 

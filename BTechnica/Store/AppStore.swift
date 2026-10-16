@@ -141,30 +141,64 @@ final class AppStore: ObservableObject {
 
     /// Import a PDF picked from the Files app: copy it into local storage,
     /// read its page count, and store the metadata record.
+    ///
+    /// File copy and `PDFDocument` page-count parsing run off the main actor —
+    /// large construction PDFs can take seconds to open and would freeze the UI.
     /// - Parameter pickedURL: A security-scoped URL from the document picker.
     @discardableResult
-    func importDrawing(from pickedURL: URL) throws -> Drawing {
+    func importDrawing(from pickedURL: URL, displayName: String? = nil) async throws -> Drawing {
         let needsStop = pickedURL.startAccessingSecurityScopedResource()
         defer { if needsStop { pickedURL.stopAccessingSecurityScopedResource() } }
+        let fallbackName = pickedURL.deletingPathExtension().lastPathComponent
+        let name = displayName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedName = (name?.isEmpty == false ? name! : fallbackName)
+        return try await importPDFFile(from: pickedURL, displayName: resolvedName.isEmpty ? "Untitled drawing" : resolvedName)
+    }
 
+    /// Copies a bundled sample floor plan into local storage.
+    @discardableResult
+    func importSampleDrawing(_ sample: SampleDrawing) async throws -> Drawing {
+        guard let bundleURL = Self.bundleURL(for: sample) else {
+            throw ImportError.sampleNotFound
+        }
+        return try await importPDFFile(from: bundleURL, displayName: sample.defaultName)
+    }
+
+    enum ImportError: LocalizedError {
+        case sampleNotFound
+
+        var errorDescription: String? {
+            switch self {
+            case .sampleNotFound: return "Sample drawing file not found in the app bundle."
+            }
+        }
+    }
+
+    private static func bundleURL(for sample: SampleDrawing) -> URL? {
+        for subdirectory in ["Resources/SampleDrawings", "SampleDrawings", nil] {
+            if let url = Bundle.main.url(forResource: sample.bundleResourceName,
+                                         withExtension: "pdf",
+                                         subdirectory: subdirectory) {
+                return url
+            }
+        }
+        return Bundle.main.url(forResource: sample.bundleResourceName, withExtension: "pdf")
+    }
+
+    private func importPDFFile(from sourceURL: URL, displayName: String) async throws -> Drawing {
         try fileManager.createDirectory(at: drawingsDirectoryURL, withIntermediateDirectories: true)
 
         let newId = UUID()
         let storedFileName = "\(newId.uuidString).pdf"
         let destinationURL = drawingsDirectoryURL.appendingPathComponent(storedFileName)
+        let projectId = data.project.id
 
-        if fileManager.fileExists(atPath: destinationURL.path) {
-            try fileManager.removeItem(at: destinationURL)
-        }
-        try fileManager.copyItem(at: pickedURL, to: destinationURL)
+        let pageCount = try await Self.copyPDFAndReadPageCount(from: sourceURL, to: destinationURL)
 
-        let pageCount = PDFDocument(url: destinationURL)?.pageCount ?? 0
-
-        let displayName = pickedURL.deletingPathExtension().lastPathComponent
         let drawing = Drawing(
             id: newId,
-            projectId: data.project.id,
-            name: displayName.isEmpty ? "Untitled drawing" : displayName,
+            projectId: projectId,
+            name: displayName,
             fileName: storedFileName,
             pageCount: pageCount
         )
@@ -172,6 +206,28 @@ final class AppStore: ObservableObject {
         data.drawings.append(drawing)
         persist()
         return drawing
+    }
+
+    /// Copies the PDF and reads `pageCount` off the main thread.
+    private static func copyPDFAndReadPageCount(from sourceURL: URL, to destinationURL: URL) async throws -> Int {
+        try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let started = CFAbsoluteTimeGetCurrent()
+                do {
+                    let fm = FileManager.default
+                    if fm.fileExists(atPath: destinationURL.path) {
+                        try fm.removeItem(at: destinationURL)
+                    }
+                    try fm.copyItem(at: sourceURL, to: destinationURL)
+                    let pageCount = PDFDocument(url: destinationURL)?.pageCount ?? 0
+                    let elapsed = CFAbsoluteTimeGetCurrent() - started
+                    print("[AppStore] import copy+pageCount \(String(format: "%.2f", elapsed))s pages=\(pageCount) \(destinationURL.lastPathComponent)")
+                    continuation.resume(returning: pageCount)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
     }
 
     /// Updates name and optional metadata. File, page count and calibrations stay as stored.

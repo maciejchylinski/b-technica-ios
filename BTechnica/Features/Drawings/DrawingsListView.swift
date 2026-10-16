@@ -6,7 +6,9 @@ struct DrawingsListView: View {
     @EnvironmentObject private var store: AppStore
 
     @State private var showingPicker = false
+    @State private var showSamplePicker = false
     @State private var importError: String?
+    @State private var multiPageNotice: String?
     @State private var detailsDrawingId: UUID?
     @State private var pendingEditorId: UUID?
     @State private var pendingDelete: PendingDrawingDelete?
@@ -23,11 +25,21 @@ struct DrawingsListView: View {
             .navigationTitle("Drawings")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showingPicker = true
+                    Menu {
+                        Button {
+                            showingPicker = true
+                        } label: {
+                            Label("Import PDF", systemImage: "square.and.arrow.down")
+                        }
+                        Button {
+                            showSamplePicker = true
+                        } label: {
+                            Label("Add sample drawing", systemImage: "doc.badge.plus")
+                        }
                     } label: {
-                        Label("Import PDF", systemImage: "plus")
+                        Image(systemName: "plus")
                     }
+                    .accessibilityLabel("Add drawing")
                 }
             }
             .sheet(isPresented: $showingPicker, onDismiss: presentPendingEditor) {
@@ -36,6 +48,11 @@ struct DrawingsListView: View {
                     showingPicker = false
                 }
                 .ignoresSafeArea()
+            }
+            .sheet(isPresented: $showSamplePicker) {
+                SampleDrawingsSheet { sample in
+                    importSample(sample)
+                }
             }
             .sheet(isPresented: Binding(
                 get: { detailsDrawingId != nil },
@@ -52,6 +69,13 @@ struct DrawingsListView: View {
                 Button("OK", role: .cancel) { importError = nil }
             } message: {
                 Text(importError ?? "")
+            }
+            .alert(DrawingImportNotice.multiPageTitle,
+                   isPresented: Binding(get: { multiPageNotice != nil },
+                                        set: { if !$0 { multiPageNotice = nil } })) {
+                Button("OK", role: .cancel) { multiPageNotice = nil }
+            } message: {
+                Text(multiPageNotice ?? "")
             }
             .alert("Delete drawing?",
                    isPresented: Binding(get: { pendingDelete != nil },
@@ -112,7 +136,7 @@ struct DrawingsListView: View {
         ContentUnavailableView {
             Label("No drawings yet", systemImage: "doc.richtext")
         } description: {
-            Text("Import a PDF drawing from Files to get started.")
+            Text("Import a PDF drawing from Files, or add a sample floor plan to try the app.")
         } actions: {
             Button {
                 showingPicker = true
@@ -123,15 +147,47 @@ struct DrawingsListView: View {
             }
             .buttonStyle(.borderedProminent)
             .padding(.horizontal, 40)
+            Button {
+                showSamplePicker = true
+            } label: {
+                Text("Add sample drawing")
+                    .frame(maxWidth: .infinity, minHeight: Theme.touchTarget)
+            }
+            .buttonStyle(.bordered)
+            .padding(.horizontal, 40)
         }
     }
 
     private func handlePicked(_ url: URL) {
-        do {
-            let drawing = try store.importDrawing(from: url)
-            pendingEditorId = drawing.id
-        } catch {
-            importError = error.localizedDescription
+        Task { @MainActor in
+            do {
+                let drawing = try await store.importDrawing(from: url)
+                noteMultiPageIfNeeded(drawing)
+                pendingEditorId = drawing.id
+                // Import is async; picker may already have dismissed.
+                presentPendingEditor()
+            } catch {
+                importError = error.localizedDescription
+            }
+        }
+    }
+
+    private func importSample(_ sample: SampleDrawing) {
+        Task { @MainActor in
+            do {
+                let drawing = try await store.importSampleDrawing(sample)
+                noteMultiPageIfNeeded(drawing)
+                pendingEditorId = drawing.id
+                presentPendingEditor()
+            } catch {
+                importError = error.localizedDescription
+            }
+        }
+    }
+
+    private func noteMultiPageIfNeeded(_ drawing: Drawing) {
+        if drawing.isMultiPage {
+            multiPageNotice = DrawingImportNotice.multiPageMessage
         }
     }
 

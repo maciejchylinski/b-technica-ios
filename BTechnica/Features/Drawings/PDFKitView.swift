@@ -16,6 +16,8 @@ struct PDFMarker: Equatable {
 /// SwiftUI wrapper around `PDFKit.PDFView`.
 ///
 /// - Native pinch-to-zoom and pan come for free from `PDFView`.
+/// - `PDFDocument` is loaded off the main thread (construction PDFs can take
+///   seconds to parse; doing that in `makeUIView` froze the UI).
 /// - Tap handling is centralized here:
 ///   - when `captureEnabled` is true, taps become PDF page coordinates via
 ///     `PDFView.page(for:nearest:)` + `PDFView.convert(_:to:)` and are reported
@@ -42,15 +44,40 @@ struct PDFKitView: UIViewRepresentable {
         pdfView.displayDirection = .vertical
         pdfView.backgroundColor = .systemGroupedBackground
         pdfView.usePageViewController(false)
-        if let document = PDFDocument(url: url) {
-            pdfView.document = document
-        }
+
+        let spinner = UIActivityIndicatorView(style: .large)
+        spinner.translatesAutoresizingMaskIntoConstraints = false
+        spinner.hidesWhenStopped = true
+        pdfView.addSubview(spinner)
+        NSLayoutConstraint.activate([
+            spinner.centerXAnchor.constraint(equalTo: pdfView.centerXAnchor),
+            spinner.centerYAnchor.constraint(equalTo: pdfView.centerYAnchor)
+        ])
+
+        let errorLabel = UILabel()
+        errorLabel.translatesAutoresizingMaskIntoConstraints = false
+        errorLabel.textAlignment = .center
+        errorLabel.textColor = .secondaryLabel
+        errorLabel.font = .preferredFont(forTextStyle: .body)
+        errorLabel.numberOfLines = 0
+        errorLabel.isHidden = true
+        pdfView.addSubview(errorLabel)
+        NSLayoutConstraint.activate([
+            errorLabel.leadingAnchor.constraint(equalTo: pdfView.layoutMarginsGuide.leadingAnchor),
+            errorLabel.trailingAnchor.constraint(equalTo: pdfView.layoutMarginsGuide.trailingAnchor),
+            errorLabel.centerYAnchor.constraint(equalTo: pdfView.centerYAnchor)
+        ])
 
         let tap = UITapGestureRecognizer(target: context.coordinator,
                                          action: #selector(Coordinator.handleTap(_:)))
         tap.delegate = context.coordinator
         pdfView.addGestureRecognizer(tap)
         context.coordinator.tapRecognizer = tap
+        context.coordinator.spinner = spinner
+        context.coordinator.errorLabel = errorLabel
+
+        // Heavy parse happens off-main; keep makeUIView cheap.
+        context.coordinator.loadDocumentIfNeeded(url: url, into: pdfView)
 
         return pdfView
     }
@@ -59,17 +86,74 @@ struct PDFKitView: UIViewRepresentable {
         context.coordinator.parent = self
         // Tap recognizer stays enabled so idle pin selection works too.
         context.coordinator.tapRecognizer?.isEnabled = true
+        context.coordinator.loadDocumentIfNeeded(url: url, into: pdfView)
         context.coordinator.render(markers: markers, on: pdfView)
     }
 
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         var parent: PDFKitView
         var tapRecognizer: UITapGestureRecognizer?
+        var spinner: UIActivityIndicatorView?
+        var errorLabel: UILabel?
+
         private var addedAnnotations: [(PDFPage, PDFAnnotation)] = []
         private var lastRenderedMarkers: [PDFMarker] = []
+        /// URL of the document currently shown (or being loaded).
+        private var loadedURL: URL?
+        private var loadID = UUID()
+        private var isLoading = false
 
         init(_ parent: PDFKitView) {
             self.parent = parent
+        }
+
+        /// Loads `PDFDocument` on a background queue once per URL.
+        func loadDocumentIfNeeded(url: URL, into pdfView: PDFView) {
+            if loadedURL == url, pdfView.document != nil || isLoading {
+                return
+            }
+
+            let loadID = UUID()
+            self.loadID = loadID
+            loadedURL = url
+            isLoading = true
+            lastRenderedMarkers = []
+            clearAnnotations()
+
+            pdfView.document = nil
+            errorLabel?.isHidden = true
+            errorLabel?.text = nil
+            spinner?.startAnimating()
+
+            let fileName = url.lastPathComponent
+            let started = CFAbsoluteTimeGetCurrent()
+            print("[PDFKitView] load start (background): \(fileName)")
+
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                let document = PDFDocument(url: url)
+                let elapsed = CFAbsoluteTimeGetCurrent() - started
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    guard self.loadID == loadID else { return }
+
+                    self.isLoading = false
+                    self.spinner?.stopAnimating()
+
+                    guard let document else {
+                        print("[PDFKitView] load failed in \(String(format: "%.2f", elapsed))s: \(fileName)")
+                        self.errorLabel?.text = "Could not open this PDF."
+                        self.errorLabel?.isHidden = false
+                        return
+                    }
+
+                    print("[PDFKitView] load done in \(String(format: "%.2f", elapsed))s, pages=\(document.pageCount): \(fileName)")
+                    pdfView.document = document
+                    // Force annotation pass: updateUIView may have "rendered" while
+                    // document was still nil and skipped drawing pins.
+                    self.lastRenderedMarkers = []
+                    self.render(markers: self.parent.markers, on: pdfView)
+                }
+            }
         }
 
         @objc func handleTap(_ recognizer: UITapGestureRecognizer) {
@@ -121,16 +205,13 @@ struct PDFKitView: UIViewRepresentable {
         }
 
         func render(markers: [PDFMarker], on pdfView: PDFView) {
+            // Do not record markers as rendered until a document exists.
+            // Otherwise async load + early updateUIView skips pins forever.
+            guard let document = pdfView.document else { return }
             guard markers != lastRenderedMarkers else { return }
             lastRenderedMarkers = markers
 
-            // Clear previous annotations.
-            for (page, annotation) in addedAnnotations {
-                page.removeAnnotation(annotation)
-            }
-            addedAnnotations.removeAll()
-
-            guard let document = pdfView.document else { return }
+            clearAnnotations()
 
             for marker in markers {
                 guard marker.pageIndex >= 0, marker.pageIndex < document.pageCount,
@@ -178,6 +259,13 @@ struct PDFKitView: UIViewRepresentable {
                 page.addAnnotation(line)
                 addedAnnotations.append((page, line))
             }
+        }
+
+        private func clearAnnotations() {
+            for (page, annotation) in addedAnnotations {
+                page.removeAnnotation(annotation)
+            }
+            addedAnnotations.removeAll()
         }
 
         private func markerRadius(for page: PDFPage) -> CGFloat {

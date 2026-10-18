@@ -1,0 +1,2 @@
+-- No seed data for B Technica v2.
+-- Migrations define schema only; do not insert production-like records here.

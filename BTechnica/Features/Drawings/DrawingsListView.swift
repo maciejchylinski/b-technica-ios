@@ -96,6 +96,8 @@ struct DrawingsListView: View {
                 NavigationLink(value: drawing.id) {
                     DrawingRow(drawing: drawing)
                 }
+                .accessibilityIdentifier("drawingRow")
+                .accessibilityLabel(drawing.name)
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button(role: .destructive) {
                         requestDelete(drawing)

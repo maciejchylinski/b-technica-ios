@@ -3,6 +3,7 @@ import SwiftUI
 /// "More" tab: project info, app details, and secondary placeholders.
 struct MoreView: View {
     @EnvironmentObject private var store: AppStore
+    @EnvironmentObject private var auth: AuthStore
 
     var body: some View {
         NavigationStack {
@@ -12,6 +13,24 @@ struct MoreView: View {
                     LabeledContent("Created",
                                    value: store.data.project.createdDate.formatted(date: .abbreviated,
                                                                                     time: .omitted))
+                }
+
+                Section("Account") {
+                    if let email = auth.userEmail {
+                        LabeledContent("Signed in", value: email)
+                    }
+                    Button(role: .destructive) {
+                        Task { await auth.signOut() }
+                    } label: {
+                        if auth.isBusy {
+                            ProgressView()
+                        } else {
+                            Text("Sign Out")
+                        }
+                    }
+                    .disabled(auth.isBusy)
+                    .accessibilityIdentifier("signOutButton")
+                    .accessibilityLabel("Sign Out")
                 }
 
                 Section("Tools") {
@@ -54,5 +73,7 @@ struct MoreView: View {
 }
 
 #Preview {
-    MoreView().environmentObject(AppStore())
+    MoreView()
+        .environmentObject(AppStore())
+        .environmentObject(AuthStore())
 }

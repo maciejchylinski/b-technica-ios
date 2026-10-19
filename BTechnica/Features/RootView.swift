@@ -32,9 +32,12 @@ struct RootView: View {
                     .tag(AppTab.issues)
 
                 MoreView()
-                    .tabItem { Label("More", systemImage: "ellipsis") }
+                    // Avoid `ellipsis` — XCTest resolves it as a non-hittable interruptor.
+                    .tabItem { Label("More", systemImage: "line.3.horizontal") }
+                    .accessibilityIdentifier("moreTab")
                     .tag(AppTab.more)
             }
+            .accessibilityIdentifier("mainTabView")
         }
     }
 
@@ -64,4 +67,5 @@ struct RootView: View {
 #Preview {
     RootView()
         .environmentObject(AppStore())
+        .environmentObject(AuthStore())
 }

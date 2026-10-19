@@ -35,6 +35,8 @@ struct IssuesView: View {
                              drawingName: drawingName(for: issue),
                              pageLabel: pageLabel(for: issue))
                 }
+                .accessibilityIdentifier("issueRow")
+                .accessibilityLabel(issue.title)
             }
         }
         .listStyle(.insetGrouped)

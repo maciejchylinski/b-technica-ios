@@ -19,68 +19,148 @@ final class AppStore: ObservableObject {
     /// User-visible local storage problem (load or save). Cleared on successful save.
     @Published private(set) var storageError: String?
 
+    /// Authenticated account that owns this local workspace.
+    let userId: UUID
+
     private let fileManager = FileManager.default
     /// When true, the on-disk `appdata.json` is corrupt/untrusted — do not promote it to last-good.
     private var storeFileUntrusted = false
 
-    /// Documents/appdata.json
+    /// Documents/Users/<userId>/appdata.json
     private var storeURL: URL {
-        documentsURL.appendingPathComponent("appdata.json")
+        userRootURL.appendingPathComponent("appdata.json")
     }
 
-    /// Documents/appdata-last-good.json — last successful write.
+    /// Documents/Users/<userId>/appdata-last-good.json — last successful write.
     private var lastGoodURL: URL {
-        documentsURL.appendingPathComponent("appdata-last-good.json")
+        userRootURL.appendingPathComponent("appdata-last-good.json")
     }
 
-    /// Documents/ (app sandbox, backed up, user-visible via Files if enabled).
-    private var documentsURL: URL {
+    /// App sandbox Documents/.
+    private var sandboxDocumentsURL: URL {
         fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
     }
 
-    /// Documents/Drawings/ — where imported PDFs are copied.
+    /// Per-account root: Documents/Users/<userId>/
+    private var userRootURL: URL {
+        sandboxDocumentsURL
+            .appendingPathComponent("Users", isDirectory: true)
+            .appendingPathComponent(userId.uuidString, isDirectory: true)
+    }
+
+    /// Documents/Users/<userId>/Drawings/
     private var drawingsDirectoryURL: URL {
-        documentsURL.appendingPathComponent("Drawings", isDirectory: true)
+        userRootURL.appendingPathComponent("Drawings", isDirectory: true)
     }
 
-    /// Documents/IssuePhotos/ — copied/captured issue photos (JPEG files).
+    /// Documents/Users/<userId>/IssuePhotos/
     private var issuePhotosDirectoryURL: URL {
-        documentsURL.appendingPathComponent("IssuePhotos", isDirectory: true)
+        userRootURL.appendingPathComponent("IssuePhotos", isDirectory: true)
     }
 
-    init() {
-        // Ensure local file directories exist before anything else.
-        let docs = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        for name in ["Drawings", "IssuePhotos"] {
-            let dir = docs.appendingPathComponent(name, isDirectory: true)
-            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    /// Preview / tests helper — uses a fixed isolated user id.
+    convenience init() {
+        self.init(userId: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, adoptLegacy: false)
+    }
+
+    /// - Parameter adoptLegacy: Copy unowned pre-auth Documents into this account once.
+    ///   Pass true only after an explicit password sign-in (not Keychain restore).
+    init(userId: UUID, adoptLegacy: Bool = false) {
+        self.userId = userId
+
+        let fm = FileManager.default
+        if adoptLegacy {
+            Self.adoptLegacyLocalDataIfNeeded(for: userId, fileManager: fm)
         }
 
-        let url = docs.appendingPathComponent("appdata.json")
+        let root = Self.userRootURL(for: userId, fileManager: fm)
+        for name in ["Drawings", "IssuePhotos"] {
+            let dir = root.appendingPathComponent(name, isDirectory: true)
+            try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+
+        let url = root.appendingPathComponent("appdata.json")
+        var loadedData = AppData(project: Project(name: "Default Project"))
+        var loadError: String?
+        var untrusted = false
+        var needsRewrite = false
+
         switch Self.loadResult(from: url) {
         case .missing:
-            self.data = AppData(project: Project(name: "Default Project"))
-            self.storageError = nil
-            self.storeFileUntrusted = false
-
+            break
         case .loaded(let loaded):
             let (migrated, didChange) = Self.migrate(loaded)
-            self.data = migrated
-            self.storageError = nil
-            self.storeFileUntrusted = false
-            if didChange {
-                // Write back schema / legacy fixes so the next launch is clean.
-                // Uses the same path as normal saves (last-good + atomic write).
-                self.persist(clearingLoadError: false)
-            }
-
+            loadedData = migrated
+            needsRewrite = didChange
         case .corrupt:
-            // Preserve bytes, do not overwrite appdata.json on init.
-            _ = Self.preserveCorruptStore(at: url, documentsURL: docs)
-            self.data = AppData(project: Project(name: "Default Project"))
-            self.storageError = "Local data could not be loaded"
-            self.storeFileUntrusted = true
+            _ = Self.preserveCorruptStore(at: url, documentsURL: root)
+            loadError = "Local data could not be loaded"
+            untrusted = true
         }
+
+        self.data = loadedData
+        self.storageError = loadError
+        self.storeFileUntrusted = untrusted
+
+        if needsRewrite {
+            // Write back schema / legacy fixes so the next launch is clean.
+            self.persist(clearingLoadError: false)
+        }
+    }
+
+    private static func userRootURL(for userId: UUID, fileManager: FileManager) -> URL {
+        fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Users", isDirectory: true)
+            .appendingPathComponent(userId.uuidString, isDirectory: true)
+    }
+
+    /// One-time copy of pre-auth Documents data into the first account that signs in.
+    /// Other accounts never see that cache. Original legacy files are left in place.
+    private static func adoptLegacyLocalDataIfNeeded(for userId: UUID, fileManager: FileManager) {
+        let docs = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let usersRoot = docs.appendingPathComponent("Users", isDirectory: true)
+        let markerURL = usersRoot.appendingPathComponent(".legacy-owner")
+        let userRoot = usersRoot.appendingPathComponent(userId.uuidString, isDirectory: true)
+        let userStore = userRoot.appendingPathComponent("appdata.json")
+        let legacyStore = docs.appendingPathComponent("appdata.json")
+
+        guard fileManager.fileExists(atPath: legacyStore.path) else { return }
+        guard !fileManager.fileExists(atPath: userStore.path) else { return }
+
+        if let owner = try? String(contentsOf: markerURL, encoding: .utf8),
+           owner != userId.uuidString {
+            // Another account already claimed the legacy workspace.
+            return
+        }
+
+        try? fileManager.createDirectory(at: userRoot, withIntermediateDirectories: true)
+
+        func copyItem(named name: String, isDirectory: Bool) {
+            let source = docs.appendingPathComponent(name, isDirectory: isDirectory)
+            let dest = userRoot.appendingPathComponent(name, isDirectory: isDirectory)
+            guard fileManager.fileExists(atPath: source.path) else { return }
+            if fileManager.fileExists(atPath: dest.path) {
+                if isDirectory {
+                    // A prior AppStore init may have created empty Drawings/IssuePhotos
+                    // folders before adoption ran; only then replace so we do not skip
+                    // PDF/photo copy, and never overwrite a non-empty workspace.
+                    let contents = (try? fileManager.contentsOfDirectory(atPath: dest.path)) ?? ["."]
+                    guard contents.isEmpty else { return }
+                    try? fileManager.removeItem(at: dest)
+                } else {
+                    return
+                }
+            }
+            try? fileManager.copyItem(at: source, to: dest)
+        }
+
+        copyItem(named: "appdata.json", isDirectory: false)
+        copyItem(named: "appdata-last-good.json", isDirectory: false)
+        copyItem(named: "Drawings", isDirectory: true)
+        copyItem(named: "IssuePhotos", isDirectory: true)
+
+        try? fileManager.createDirectory(at: usersRoot, withIntermediateDirectories: true)
+        try? userId.uuidString.write(to: markerURL, atomically: true, encoding: .utf8)
     }
 
     /// Dismisses the in-app storage error banner (does not fix the underlying problem).

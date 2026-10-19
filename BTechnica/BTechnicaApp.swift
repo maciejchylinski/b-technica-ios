@@ -2,12 +2,12 @@ import SwiftUI
 
 @main
 struct BTechnicaApp: App {
-    @StateObject private var store = AppStore()
+    @StateObject private var auth = AuthStore()
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environmentObject(store)
+            AppGateView()
+                .environmentObject(auth)
                 .tint(Theme.blue)
         }
     }

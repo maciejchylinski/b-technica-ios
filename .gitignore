@@ -14,3 +14,12 @@ xcuserdata/
 # Swift Package Manager
 .swiftpm/
 .build/
+
+# Local secrets (never commit)
+.secrets/
+Config/Secrets.xcconfig
+BTechnica/Secrets.xcconfig
+**/Secrets.local.*
+
+# UITest local credentials (never commit)
+BTechnicaUITests/Credentials.local.env

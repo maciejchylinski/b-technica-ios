@@ -3,16 +3,17 @@ import PDFKit
 import SwiftUI
 import UIKit
 
-/// Central observable store for the app.
+/// Central observable store for one local project workspace.
 ///
 /// Responsibilities:
-///  - own the in-memory `AppData` and publish changes to SwiftUI,
-///  - persist `AppData` to a JSON file in Documents on every mutation,
-///  - manage the on-disk PDF files (copy on import, resolve absolute URLs),
-///  - manage issue photo files under Documents/IssuePhotos/.
+///  - own in-memory `AppData` and publish changes to SwiftUI,
+///  - persist project drawings/issues under `Users/<userId>/Projects/<projectId>/`,
+///  - persist user-global contractors/equipment/disciplines under `Users/<userId>/userdata.json`,
+///  - manage on-disk PDF and issue photo files for this project only.
 ///
-/// This is deliberately a plain `ObservableObject` + JSON rather than a heavy
-/// persistence framework, matching the "simple, readable" goal of this slice.
+/// Cloud project rows live in Supabase; this store is local-only (not synced yet).
+/// Legacy `Documents/appdata.json` and `Users/<userId>/appdata.json` are never
+/// auto-assigned into a cloud project workspace.
 @MainActor
 final class AppStore: ObservableObject {
     @Published private(set) var data: AppData
@@ -21,19 +22,26 @@ final class AppStore: ObservableObject {
 
     /// Authenticated account that owns this local workspace.
     let userId: UUID
+    /// Cloud project id this local workspace is bound to.
+    let projectId: UUID
 
     private let fileManager = FileManager.default
-    /// When true, the on-disk `appdata.json` is corrupt/untrusted — do not promote it to last-good.
+    /// When true, the on-disk project `appdata.json` is corrupt/untrusted — do not promote it to last-good.
     private var storeFileUntrusted = false
 
-    /// Documents/Users/<userId>/appdata.json
+    /// Documents/Users/<userId>/Projects/<projectId>/appdata.json
     private var storeURL: URL {
-        userRootURL.appendingPathComponent("appdata.json")
+        projectRootURL.appendingPathComponent("appdata.json")
     }
 
-    /// Documents/Users/<userId>/appdata-last-good.json — last successful write.
+    /// Documents/Users/<userId>/Projects/<projectId>/appdata-last-good.json
     private var lastGoodURL: URL {
-        userRootURL.appendingPathComponent("appdata-last-good.json")
+        projectRootURL.appendingPathComponent("appdata-last-good.json")
+    }
+
+    /// Documents/Users/<userId>/userdata.json — contractors, equipment, disciplines.
+    private var userSharedURL: URL {
+        userRootURL.appendingPathComponent("userdata.json")
     }
 
     /// App sandbox Documents/.
@@ -43,69 +51,127 @@ final class AppStore: ObservableObject {
 
     /// Per-account root: Documents/Users/<userId>/
     private var userRootURL: URL {
-        sandboxDocumentsURL
-            .appendingPathComponent("Users", isDirectory: true)
-            .appendingPathComponent(userId.uuidString, isDirectory: true)
+        Self.userRootURL(for: userId, fileManager: fileManager)
     }
 
-    /// Documents/Users/<userId>/Drawings/
+    /// Per-project local root: Documents/Users/<userId>/Projects/<projectId>/
+    private var projectRootURL: URL {
+        Self.projectRootURL(for: userId, projectId: projectId, fileManager: fileManager)
+    }
+
+    /// Documents/Users/<userId>/Projects/<projectId>/Drawings/
     private var drawingsDirectoryURL: URL {
-        userRootURL.appendingPathComponent("Drawings", isDirectory: true)
+        projectRootURL.appendingPathComponent("Drawings", isDirectory: true)
     }
 
-    /// Documents/Users/<userId>/IssuePhotos/
+    /// Documents/Users/<userId>/Projects/<projectId>/IssuePhotos/
     private var issuePhotosDirectoryURL: URL {
-        userRootURL.appendingPathComponent("IssuePhotos", isDirectory: true)
+        projectRootURL.appendingPathComponent("IssuePhotos", isDirectory: true)
     }
 
-    /// Preview / tests helper — uses a fixed isolated user id.
+    /// Preview / tests helper — uses fixed isolated ids.
     convenience init() {
-        self.init(userId: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, adoptLegacy: false)
+        self.init(
+            userId: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
+            projectId: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
+            projectName: "Preview Project"
+        )
     }
 
-    /// - Parameter adoptLegacy: Copy unowned pre-auth Documents into this account once.
-    ///   Pass true only after an explicit password sign-in (not Keychain restore).
-    init(userId: UUID, adoptLegacy: Bool = false) {
+    /// Opens (or creates) the local workspace for a cloud project.
+    /// Does not import legacy account or Documents-root data into this project.
+    init(
+        userId: UUID,
+        projectId: UUID,
+        projectName: String,
+        createdDate: Date = Date()
+    ) {
         self.userId = userId
+        self.projectId = projectId
 
         let fm = FileManager.default
-        if adoptLegacy {
-            Self.adoptLegacyLocalDataIfNeeded(for: userId, fileManager: fm)
-        }
-
-        let root = Self.userRootURL(for: userId, fileManager: fm)
+        let userRoot = Self.userRootURL(for: userId, fileManager: fm)
+        let projectRoot = Self.projectRootURL(for: userId, projectId: projectId, fileManager: fm)
+        try? fm.createDirectory(at: userRoot, withIntermediateDirectories: true)
         for name in ["Drawings", "IssuePhotos"] {
-            let dir = root.appendingPathComponent(name, isDirectory: true)
+            let dir = projectRoot.appendingPathComponent(name, isDirectory: true)
             try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
         }
 
-        let url = root.appendingPathComponent("appdata.json")
-        var loadedData = AppData(project: Project(name: "Default Project"))
+        Self.seedUserSharedFromLegacyAccountIfNeeded(userId: userId, fileManager: fm)
+
+        let projectURL = projectRoot.appendingPathComponent("appdata.json")
+        let defaultProject = Project(id: projectId, name: projectName, createdDate: createdDate)
+        var projectLocal = ProjectLocalData(project: defaultProject)
+        var shared = UserSharedData()
         var loadError: String?
         var untrusted = false
         var needsRewrite = false
 
-        switch Self.loadResult(from: url) {
+        switch Self.loadProjectResult(from: projectURL) {
         case .missing:
             break
         case .loaded(let loaded):
-            let (migrated, didChange) = Self.migrate(loaded)
-            loadedData = migrated
+            let (migrated, didChange) = Self.migrateProject(loaded, expectedProjectId: projectId)
+            projectLocal = migrated
             needsRewrite = didChange
         case .corrupt:
-            _ = Self.preserveCorruptStore(at: url, documentsURL: root)
+            _ = Self.preserveCorruptStore(at: projectURL, documentsURL: projectRoot)
             loadError = "Local data could not be loaded"
             untrusted = true
         }
+
+        // Keep the cloud project id/name as the workspace identity.
+        if projectLocal.project.id != projectId {
+            projectLocal.project.id = projectId
+            needsRewrite = true
+        }
+        if projectLocal.project.name != projectName {
+            projectLocal.project.name = projectName
+            needsRewrite = true
+        }
+
+        switch Self.loadUserSharedResult(from: userRoot.appendingPathComponent("userdata.json")) {
+        case .missing:
+            break
+        case .loaded(let loaded):
+            shared = loaded
+        case .corrupt:
+            if loadError == nil {
+                loadError = "Local data could not be loaded"
+            }
+        }
+
+        var loadedData = AppData(
+            project: projectLocal.project,
+            drawingFolders: projectLocal.drawingFolders,
+            drawings: projectLocal.drawings,
+            issues: projectLocal.issues,
+            equipment: shared.equipment,
+            contractors: shared.contractors,
+            disciplines: shared.disciplines,
+            schemaVersion: max(projectLocal.schemaVersion, shared.schemaVersion)
+        )
+        let (normalized, didNormalize) = Self.normalizedIssueNumbers(loadedData)
+        loadedData = normalized
+        needsRewrite = needsRewrite || didNormalize
 
         self.data = loadedData
         self.storageError = loadError
         self.storeFileUntrusted = untrusted
 
         if needsRewrite {
-            // Write back schema / legacy fixes so the next launch is clean.
+            // Write back schema / identity fixes so the next launch is clean.
             self.persist(clearingLoadError: false)
         }
+    }
+
+    /// Updates the displayed project name when the cloud row changes (local storage only).
+    func applyCloudProjectName(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, data.project.name != trimmed else { return }
+        data.project.name = trimmed
+        persist()
     }
 
     private static func userRootURL(for userId: UUID, fileManager: FileManager) -> URL {
@@ -114,53 +180,32 @@ final class AppStore: ObservableObject {
             .appendingPathComponent(userId.uuidString, isDirectory: true)
     }
 
-    /// One-time copy of pre-auth Documents data into the first account that signs in.
-    /// Other accounts never see that cache. Original legacy files are left in place.
-    private static func adoptLegacyLocalDataIfNeeded(for userId: UUID, fileManager: FileManager) {
-        let docs = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let usersRoot = docs.appendingPathComponent("Users", isDirectory: true)
-        let markerURL = usersRoot.appendingPathComponent(".legacy-owner")
-        let userRoot = usersRoot.appendingPathComponent(userId.uuidString, isDirectory: true)
-        let userStore = userRoot.appendingPathComponent("appdata.json")
-        let legacyStore = docs.appendingPathComponent("appdata.json")
+    private static func projectRootURL(for userId: UUID, projectId: UUID, fileManager: FileManager) -> URL {
+        userRootURL(for: userId, fileManager: fileManager)
+            .appendingPathComponent("Projects", isDirectory: true)
+            .appendingPathComponent(projectId.uuidString, isDirectory: true)
+    }
 
-        guard fileManager.fileExists(atPath: legacyStore.path) else { return }
-        guard !fileManager.fileExists(atPath: userStore.path) else { return }
+    /// One-time seed of user-global dictionaries from the pre-project account file.
+    /// Never copies drawings, issues, or photos into a cloud project workspace.
+    private static func seedUserSharedFromLegacyAccountIfNeeded(userId: UUID, fileManager: FileManager) {
+        let userRoot = userRootURL(for: userId, fileManager: fileManager)
+        let sharedURL = userRoot.appendingPathComponent("userdata.json")
+        guard !fileManager.fileExists(atPath: sharedURL.path) else { return }
 
-        if let owner = try? String(contentsOf: markerURL, encoding: .utf8),
-           owner != userId.uuidString {
-            // Another account already claimed the legacy workspace.
-            return
-        }
+        let legacyAccountStore = userRoot.appendingPathComponent("appdata.json")
+        guard case .loaded(let legacy) = loadAppDataResult(from: legacyAccountStore) else { return }
 
-        try? fileManager.createDirectory(at: userRoot, withIntermediateDirectories: true)
-
-        func copyItem(named name: String, isDirectory: Bool) {
-            let source = docs.appendingPathComponent(name, isDirectory: isDirectory)
-            let dest = userRoot.appendingPathComponent(name, isDirectory: isDirectory)
-            guard fileManager.fileExists(atPath: source.path) else { return }
-            if fileManager.fileExists(atPath: dest.path) {
-                if isDirectory {
-                    // A prior AppStore init may have created empty Drawings/IssuePhotos
-                    // folders before adoption ran; only then replace so we do not skip
-                    // PDF/photo copy, and never overwrite a non-empty workspace.
-                    let contents = (try? fileManager.contentsOfDirectory(atPath: dest.path)) ?? ["."]
-                    guard contents.isEmpty else { return }
-                    try? fileManager.removeItem(at: dest)
-                } else {
-                    return
-                }
-            }
-            try? fileManager.copyItem(at: source, to: dest)
-        }
-
-        copyItem(named: "appdata.json", isDirectory: false)
-        copyItem(named: "appdata-last-good.json", isDirectory: false)
-        copyItem(named: "Drawings", isDirectory: true)
-        copyItem(named: "IssuePhotos", isDirectory: true)
-
-        try? fileManager.createDirectory(at: usersRoot, withIntermediateDirectories: true)
-        try? userId.uuidString.write(to: markerURL, atomically: true, encoding: .utf8)
+        let shared = UserSharedData(
+            contractors: legacy.contractors,
+            equipment: legacy.equipment,
+            disciplines: legacy.disciplines
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        guard let encoded = try? encoder.encode(shared) else { return }
+        try? encoded.write(to: sharedURL, options: [.atomic])
     }
 
     /// Dismisses the in-app storage error banner (does not fix the underlying problem).
@@ -170,28 +215,52 @@ final class AppStore: ObservableObject {
 
     // MARK: - Migration
 
-    /// Applies schema and legacy field migrations. Returns whether on-disk rewrite is needed.
-    private static func migrate(_ data: AppData) -> (AppData, Bool) {
+    /// Applies schema migrations on project-local data. Returns whether rewrite is needed.
+    private static func migrateProject(
+        _ data: ProjectLocalData,
+        expectedProjectId: UUID
+    ) -> (ProjectLocalData, Bool) {
         var copy = data
         var changed = false
 
-        // v0 → v1: introduce schemaVersion; all existing fields already decode.
         if copy.schemaVersion < 1 {
             copy.schemaVersion = 1
             changed = true
         }
-
-        // Keep schemaVersion from drifting above what this build writes.
         if copy.schemaVersion > AppDataSchema.current {
-            // Unknown future schema: keep data as decoded; do not rewrite.
-            // (Decode may have dropped unknown keys — acceptable for this slice.)
+            // Unknown future schema: keep as decoded; do not rewrite.
         } else if copy.schemaVersion != AppDataSchema.current {
             copy.schemaVersion = AppDataSchema.current
             changed = true
         }
 
-        let (normalized, didNormalize) = Self.normalizedIssueNumbers(copy)
-        return (normalized, changed || didNormalize)
+        // Folders and drawings must stay bound to this cloud project id.
+        for index in copy.drawingFolders.indices where copy.drawingFolders[index].projectId != expectedProjectId {
+            copy.drawingFolders[index].projectId = expectedProjectId
+            changed = true
+        }
+        for index in copy.drawings.indices where copy.drawings[index].projectId != expectedProjectId {
+            copy.drawings[index].projectId = expectedProjectId
+            changed = true
+        }
+
+        let folderIds = Set(copy.drawingFolders.map(\.id))
+        // Drop broken parent links (treat as root) and clear orphan drawing folder refs.
+        for index in copy.drawingFolders.indices {
+            if let parent = copy.drawingFolders[index].parentFolderId,
+               parent == copy.drawingFolders[index].id || !folderIds.contains(parent) {
+                copy.drawingFolders[index].parentFolderId = nil
+                changed = true
+            }
+        }
+        for index in copy.drawings.indices {
+            if let folderId = copy.drawings[index].folderId, !folderIds.contains(folderId) {
+                copy.drawings[index].folderId = nil
+                changed = true
+            }
+        }
+
+        return (copy, changed)
     }
 
     /// Assign sequential numbers to any legacy issues that loaded with `number == 0`.
@@ -217,6 +286,112 @@ final class AppStore: ObservableObject {
         drawingsDirectoryURL.appendingPathComponent(drawing.fileName)
     }
 
+    // MARK: - Drawing folders
+
+    func folder(id: UUID) -> DrawingFolder? {
+        data.drawingFolders.first { $0.id == id }
+    }
+
+    /// Child folders of `parentFolderId` (`nil` = project root), sorted for display.
+    func folders(in parentFolderId: UUID?) -> [DrawingFolder] {
+        data.drawingFolders
+            .filter { $0.parentFolderId == parentFolderId }
+            .sorted {
+                if $0.sortOrder != $1.sortOrder { return $0.sortOrder < $1.sortOrder }
+                return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            }
+    }
+
+    /// Drawings directly inside `folderId` (`nil` = project root).
+    func drawings(in folderId: UUID?) -> [Drawing] {
+        data.drawings
+            .filter { $0.folderId == folderId }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    func isFolderEmpty(_ folderId: UUID) -> Bool {
+        !data.drawingFolders.contains(where: { $0.parentFolderId == folderId })
+            && !data.drawings.contains(where: { $0.folderId == folderId })
+    }
+
+    /// Creates a user-named folder. Returns nil when the name is empty or a sibling clash.
+    @discardableResult
+    func createFolder(name: String, parentFolderId: UUID?) -> DrawingFolder? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        if let parentFolderId, folder(id: parentFolderId) == nil { return nil }
+        guard !siblingFolderNameExists(trimmed, parentFolderId: parentFolderId) else { return nil }
+
+        let nextOrder = (folders(in: parentFolderId).map(\.sortOrder).max() ?? -1) + 1
+        let created = DrawingFolder(
+            projectId: data.project.id,
+            parentFolderId: parentFolderId,
+            name: trimmed,
+            sortOrder: nextOrder
+        )
+        data.drawingFolders.append(created)
+        persist()
+        return created
+    }
+
+    /// Renames a folder. Returns an error message, or nil on success.
+    @discardableResult
+    func renameFolder(id: UUID, name: String) -> String? {
+        guard let index = data.drawingFolders.firstIndex(where: { $0.id == id }) else {
+            return "Folder not found."
+        }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "Enter a folder name." }
+        let parentId = data.drawingFolders[index].parentFolderId
+        if siblingFolderNameExists(trimmed, parentFolderId: parentId, excludingId: id) {
+            return "A folder with that name already exists here."
+        }
+        data.drawingFolders[index].name = trimmed
+        persist()
+        return nil
+    }
+
+    /// Deletes a folder only when it has no child folders and no drawings.
+    @discardableResult
+    func deleteFolder(id: UUID) -> String? {
+        guard folder(id: id) != nil else { return "Folder not found." }
+        guard isFolderEmpty(id) else {
+            return "Only empty folders can be deleted. Move or delete drawings and subfolders first."
+        }
+        data.drawingFolders.removeAll { $0.id == id }
+        persist()
+        return nil
+    }
+
+    /// Moves a drawing to another folder (`nil` = project root).
+    @discardableResult
+    func moveDrawing(id: UUID, toFolderId: UUID?) -> String? {
+        guard let index = data.drawings.firstIndex(where: { $0.id == id }) else {
+            return "Drawing not found."
+        }
+        if let toFolderId {
+            guard let target = folder(id: toFolderId) else { return "Folder not found." }
+            guard target.projectId == data.project.id else { return "Folder belongs to another project." }
+        }
+        guard data.drawings[index].folderId != toFolderId else { return nil }
+        data.drawings[index].folderId = toFolderId
+        persist()
+        return nil
+    }
+
+    private func siblingFolderNameExists(
+        _ name: String,
+        parentFolderId: UUID?,
+        excludingId: UUID? = nil
+    ) -> Bool {
+        let needle = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return data.drawingFolders.contains {
+            $0.parentFolderId == parentFolderId
+                && $0.id != excludingId
+                && $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == needle
+        }
+    }
+
     // MARK: - Drawings
 
     /// Import a PDF picked from the Files app: copy it into local storage,
@@ -225,31 +400,42 @@ final class AppStore: ObservableObject {
     /// File copy and `PDFDocument` page-count parsing run off the main actor —
     /// large construction PDFs can take seconds to open and would freeze the UI.
     /// - Parameter pickedURL: A security-scoped URL from the document picker.
+    /// - Parameter folderId: Destination folder; `nil` places the drawing at project root.
     @discardableResult
-    func importDrawing(from pickedURL: URL, displayName: String? = nil) async throws -> Drawing {
+    func importDrawing(
+        from pickedURL: URL,
+        displayName: String? = nil,
+        folderId: UUID? = nil
+    ) async throws -> Drawing {
         let needsStop = pickedURL.startAccessingSecurityScopedResource()
         defer { if needsStop { pickedURL.stopAccessingSecurityScopedResource() } }
         let fallbackName = pickedURL.deletingPathExtension().lastPathComponent
         let name = displayName?.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedName = (name?.isEmpty == false ? name! : fallbackName)
-        return try await importPDFFile(from: pickedURL, displayName: resolvedName.isEmpty ? "Untitled drawing" : resolvedName)
+        return try await importPDFFile(
+            from: pickedURL,
+            displayName: resolvedName.isEmpty ? "Untitled drawing" : resolvedName,
+            folderId: folderId
+        )
     }
 
     /// Copies a bundled sample floor plan into local storage.
     @discardableResult
-    func importSampleDrawing(_ sample: SampleDrawing) async throws -> Drawing {
+    func importSampleDrawing(_ sample: SampleDrawing, folderId: UUID? = nil) async throws -> Drawing {
         guard let bundleURL = Self.bundleURL(for: sample) else {
             throw ImportError.sampleNotFound
         }
-        return try await importPDFFile(from: bundleURL, displayName: sample.defaultName)
+        return try await importPDFFile(from: bundleURL, displayName: sample.defaultName, folderId: folderId)
     }
 
     enum ImportError: LocalizedError {
         case sampleNotFound
+        case invalidFolder
 
         var errorDescription: String? {
             switch self {
             case .sampleNotFound: return "Sample drawing file not found in the app bundle."
+            case .invalidFolder: return "That folder is not available in this project."
             }
         }
     }
@@ -265,8 +451,22 @@ final class AppStore: ObservableObject {
         return Bundle.main.url(forResource: sample.bundleResourceName, withExtension: "pdf")
     }
 
-    private func importPDFFile(from sourceURL: URL, displayName: String) async throws -> Drawing {
+    private func importPDFFile(
+        from sourceURL: URL,
+        displayName: String,
+        folderId: UUID? = nil
+    ) async throws -> Drawing {
         try fileManager.createDirectory(at: drawingsDirectoryURL, withIntermediateDirectories: true)
+
+        let resolvedFolderId: UUID?
+        if let folderId {
+            guard let folder = folder(id: folderId), folder.projectId == data.project.id else {
+                throw ImportError.invalidFolder
+            }
+            resolvedFolderId = folderId
+        } else {
+            resolvedFolderId = nil
+        }
 
         let newId = UUID()
         let storedFileName = "\(newId.uuidString).pdf"
@@ -278,6 +478,7 @@ final class AppStore: ObservableObject {
         let drawing = Drawing(
             id: newId,
             projectId: projectId,
+            folderId: resolvedFolderId,
             name: displayName,
             fileName: storedFileName,
             pageCount: pageCount
@@ -747,12 +948,13 @@ final class AppStore: ObservableObject {
         persist(clearingLoadError: true)
     }
 
-    /// Writes `data` atomically. Copies the previous `appdata.json` to
-    /// `appdata-last-good.json` first when present.
+    /// Writes project-local and user-shared files atomically.
     private func persist(clearingLoadError: Bool) {
         do {
+            try fileManager.createDirectory(at: projectRootURL, withIntermediateDirectories: true)
+            try fileManager.createDirectory(at: userRootURL, withIntermediateDirectories: true)
+
             if !storeFileUntrusted, fileManager.fileExists(atPath: storeURL.path) {
-                // Best-effort last-good snapshot before overwrite.
                 try? fileManager.removeItem(at: lastGoodURL)
                 try? fileManager.copyItem(at: storeURL, to: lastGoodURL)
             }
@@ -760,11 +962,25 @@ final class AppStore: ObservableObject {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             encoder.dateEncodingStrategy = .iso8601
-            let encoded = try encoder.encode(data)
-            try encoded.write(to: storeURL, options: [.atomic])
+
+            let projectLocal = ProjectLocalData(
+                project: data.project,
+                drawingFolders: data.drawingFolders,
+                drawings: data.drawings,
+                issues: data.issues,
+                schemaVersion: data.schemaVersion
+            )
+            let shared = UserSharedData(
+                contractors: data.contractors,
+                equipment: data.equipment,
+                disciplines: data.disciplines,
+                schemaVersion: data.schemaVersion
+            )
+
+            try encoder.encode(projectLocal).write(to: storeURL, options: [.atomic])
+            try encoder.encode(shared).write(to: userSharedURL, options: [.atomic])
             storeFileUntrusted = false
-            // Successful write clears save errors; also clears a prior load error once
-            // new valid data has replaced an untrusted file (clearingLoadError == true).
+
             if clearingLoadError {
                 storageError = nil
             } else if storageError == "Local data could not be saved" {
@@ -776,13 +992,52 @@ final class AppStore: ObservableObject {
         }
     }
 
-    private enum LoadResult {
+    private enum ProjectLoadResult {
+        case missing
+        case loaded(ProjectLocalData)
+        case corrupt
+    }
+
+    private enum UserSharedLoadResult {
+        case missing
+        case loaded(UserSharedData)
+        case corrupt
+    }
+
+    private enum AppDataLoadResult {
         case missing
         case loaded(AppData)
         case corrupt
     }
 
-    private static func loadResult(from url: URL) -> LoadResult {
+    private static func loadProjectResult(from url: URL) -> ProjectLoadResult {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: url.path) else { return .missing }
+        guard let raw = try? Data(contentsOf: url) else { return .corrupt }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        if let decoded = try? decoder.decode(ProjectLocalData.self, from: raw) {
+            return .loaded(decoded)
+        }
+        // Older combined documents are accepted only for decode robustness; we never
+        // pull contractors/equipment from a project file into user-shared storage here.
+        if let legacy = try? decoder.decode(AppData.self, from: raw) {
+            return .loaded(
+                ProjectLocalData(
+                    project: legacy.project,
+                    drawingFolders: legacy.drawingFolders,
+                    drawings: legacy.drawings,
+                    issues: legacy.issues,
+                    schemaVersion: legacy.schemaVersion
+                )
+            )
+        }
+        print("[AppStore] Failed to decode project appdata.json")
+        return .corrupt
+    }
+
+    private static func loadUserSharedResult(from url: URL) -> UserSharedLoadResult {
         let fm = FileManager.default
         guard fm.fileExists(atPath: url.path) else { return .missing }
         guard let raw = try? Data(contentsOf: url) else { return .corrupt }
@@ -790,10 +1045,23 @@ final class AppStore: ObservableObject {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         do {
-            let decoded = try decoder.decode(AppData.self, from: raw)
-            return .loaded(decoded)
+            return .loaded(try decoder.decode(UserSharedData.self, from: raw))
         } catch {
-            print("[AppStore] Failed to decode appdata.json: \(error)")
+            print("[AppStore] Failed to decode userdata.json: \(error)")
+            return .corrupt
+        }
+    }
+
+    private static func loadAppDataResult(from url: URL) -> AppDataLoadResult {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: url.path) else { return .missing }
+        guard let raw = try? Data(contentsOf: url) else { return .corrupt }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        do {
+            return .loaded(try decoder.decode(AppData.self, from: raw))
+        } catch {
             return .corrupt
         }
     }

@@ -9,6 +9,9 @@ import Foundation
 struct Drawing: Codable, Identifiable, Equatable {
     var id: UUID
     var projectId: UUID
+    /// Parent folder; `nil` means the drawing sits at the project root.
+    /// Matches Supabase `drawings.folder_id`.
+    var folderId: UUID?
     var name: String
     /// File name relative to Documents/Drawings, e.g. "<uuid>.pdf".
     var fileName: String
@@ -28,6 +31,7 @@ struct Drawing: Codable, Identifiable, Equatable {
 
     init(id: UUID = UUID(),
          projectId: UUID,
+         folderId: UUID? = nil,
          name: String,
          fileName: String,
          pageCount: Int,
@@ -39,6 +43,7 @@ struct Drawing: Codable, Identifiable, Equatable {
          calibrations: [PageCalibration] = []) {
         self.id = id
         self.projectId = projectId
+        self.folderId = folderId
         self.name = name
         self.fileName = fileName
         self.pageCount = pageCount
@@ -90,7 +95,7 @@ struct Drawing: Codable, Identifiable, Equatable {
     // MARK: - Codable (new metadata keys are optional for older appdata.json)
 
     private enum CodingKeys: String, CodingKey {
-        case id, projectId, name, fileName, pageCount, createdDate
+        case id, projectId, folderId, name, fileName, pageCount, createdDate
         case revision, discipline, location, drawingDate, calibrations
     }
 
@@ -98,6 +103,7 @@ struct Drawing: Codable, Identifiable, Equatable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(UUID.self, forKey: .id)
         projectId = try c.decode(UUID.self, forKey: .projectId)
+        folderId = try c.decodeIfPresent(UUID.self, forKey: .folderId)
         name = try c.decode(String.self, forKey: .name)
         fileName = try c.decode(String.self, forKey: .fileName)
         pageCount = try c.decode(Int.self, forKey: .pageCount)
@@ -113,6 +119,7 @@ struct Drawing: Codable, Identifiable, Equatable {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(id, forKey: .id)
         try c.encode(projectId, forKey: .projectId)
+        try c.encodeIfPresent(folderId, forKey: .folderId)
         try c.encode(name, forKey: .name)
         try c.encode(fileName, forKey: .fileName)
         try c.encode(pageCount, forKey: .pageCount)

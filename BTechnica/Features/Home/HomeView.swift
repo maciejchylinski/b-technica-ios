@@ -30,7 +30,7 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(store.data.project.name)
                             .font(.title2).bold()
-                        Text("Active project")
+                        Text("Local workspace · not synced")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }

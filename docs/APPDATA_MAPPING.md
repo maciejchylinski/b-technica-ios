@@ -45,7 +45,7 @@ Cloud splits that into logical drawing / revision / pages.
 | `discipline` | `drawings.discipline` (text; optional later FK) |
 | `location` | `drawings.location` |
 | `createdDate` | `drawings.created_at` |
-| `folder` | N/A today → `drawing_folders` when user creates folders (root/`folder_id` null) |
+| `folderId` | `drawings.folder_id` (`null` = project root); local `drawingFolders[]` → `drawing_folders` |
 | `fileName` | Upload `Documents/Drawings/{fileName}` → Storage `drawings/{project_id}/{revision_id}.pdf`; store path in `drawing_revisions.storage_path`; keep basename in `original_file_name` |
 | `pageCount` | `drawing_revisions.page_count` + N `drawing_pages` rows (`page_index` 0..n-1) |
 | `revision` | `drawing_revisions.revision_label` |

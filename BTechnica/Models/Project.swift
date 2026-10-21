@@ -1,8 +1,7 @@
 import Foundation
 
-/// A construction project. For this first slice there is a single default
-/// project created on first launch, but the model is already project-scoped so
-/// multiple projects can be added later without a data migration.
+/// Local project identity mirrored from a cloud `projects` row.
+/// Drawings/issues for this id live under the per-project local workspace folder.
 struct Project: Codable, Identifiable, Equatable {
     var id: UUID
     var name: String

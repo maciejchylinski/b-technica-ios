@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// Routes between loading, login, and the existing authenticated app shell.
+/// Routes loading → login → projects list → local project workspace.
+/// Cloud projects come from Supabase; each workspace is local-only on device.
 struct AppGateView: View {
     @EnvironmentObject private var auth: AuthStore
+    @StateObject private var projects = ProjectsStore()
     @State private var store: AppStore?
-    @State private var boundWorkspaceEpoch: Int = -1
+    @State private var boundProjectId: UUID?
 
     var body: some View {
         Group {
@@ -18,51 +20,79 @@ struct AppGateView: View {
                 LoginView()
 
             case .signedIn:
-                if let store {
-                    RootView()
-                        .environmentObject(store)
-                } else {
-                    ProgressView("Loading workspace…")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Theme.background)
-                }
+                signedInContent
             }
         }
-        .onChange(of: auth.phase) { _, phase in
-            syncStore(for: phase)
+        .onChange(of: auth.userId) { _, userId in
+            projects.bind(userId: userId)
+            syncWorkspace()
         }
-        .onChange(of: auth.session?.user.id) { _, _ in
-            syncStore(for: auth.phase)
+        .onChange(of: projects.selectedProjectId) { _, _ in
+            syncWorkspace()
         }
-        .onChange(of: auth.workspaceEpoch) { _, _ in
-            syncStore(for: auth.phase)
+        .onChange(of: projects.isWorkspaceOpen) { _, _ in
+            syncWorkspace()
+        }
+        .onChange(of: projects.projects) { _, _ in
+            syncWorkspace()
         }
         .onAppear {
-            syncStore(for: auth.phase)
+            projects.bind(userId: auth.userId)
+            syncWorkspace()
+        }
+        .task(id: auth.userId) {
+            guard auth.phase == .signedIn else { return }
+            // Cloud project workspaces must not adopt legacy Documents data.
+            _ = auth.consumeLegacyAdoptionIntent()
+            projects.bind(userId: auth.userId)
+            await projects.load(reopenWorkspace: true)
+            syncWorkspace()
         }
     }
 
-    private func syncStore(for phase: AuthStore.Phase) {
-        switch phase {
-        case .signedIn:
-            guard let userId = auth.userId else {
-                store = nil
-                boundWorkspaceEpoch = -1
-                return
+    @ViewBuilder
+    private var signedInContent: some View {
+        if projects.isWorkspaceOpen {
+            if let store {
+                RootView()
+                    .environmentObject(store)
+                    .environmentObject(projects)
+            } else if projects.selectedProjectId != nil {
+                ProgressView("Opening project…")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Theme.background)
+            } else {
+                ProjectsView()
+                    .environmentObject(projects)
             }
-            let adoptLegacy = auth.consumeLegacyAdoptionIntent()
-            let needsNewStore =
-                store == nil
-                || store?.userId != userId
-                || boundWorkspaceEpoch != auth.workspaceEpoch
-                || adoptLegacy
-            if needsNewStore {
-                store = AppStore(userId: userId, adoptLegacy: adoptLegacy)
-                boundWorkspaceEpoch = auth.workspaceEpoch
-            }
-        case .signedOut, .loading:
+        } else {
+            ProjectsView()
+                .environmentObject(projects)
+        }
+    }
+
+    private func syncWorkspace() {
+        guard auth.phase == .signedIn,
+              projects.isWorkspaceOpen,
+              let userId = auth.userId,
+              let projectId = projects.selectedProjectId,
+              let cloud = projects.projects.first(where: { $0.id == projectId })
+        else {
             store = nil
-            boundWorkspaceEpoch = -1
+            boundProjectId = nil
+            return
+        }
+
+        if store == nil || store?.userId != userId || boundProjectId != projectId {
+            store = AppStore(
+                userId: userId,
+                projectId: projectId,
+                projectName: cloud.name,
+                createdDate: cloud.createdAt
+            )
+            boundProjectId = projectId
+        } else {
+            store?.applyCloudProjectName(cloud.name)
         }
     }
 }

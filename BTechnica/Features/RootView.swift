@@ -68,4 +68,5 @@ struct RootView: View {
     RootView()
         .environmentObject(AppStore())
         .environmentObject(AuthStore())
+        .environmentObject(ProjectsStore())
 }

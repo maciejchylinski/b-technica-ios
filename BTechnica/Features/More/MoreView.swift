@@ -1,18 +1,31 @@
 import SwiftUI
 
-/// "More" tab: project info, app details, and secondary placeholders.
+/// "More" tab: project info, account, dictionaries, and secondary tools.
 struct MoreView: View {
     @EnvironmentObject private var store: AppStore
     @EnvironmentObject private var auth: AuthStore
+    @EnvironmentObject private var projects: ProjectsStore
 
     var body: some View {
         NavigationStack {
             List {
                 Section("Project") {
                     LabeledContent("Name", value: store.data.project.name)
-                    LabeledContent("Created",
-                                   value: store.data.project.createdDate.formatted(date: .abbreviated,
-                                                                                    time: .omitted))
+                    LabeledContent(
+                        "Created",
+                        value: store.data.project.createdDate.formatted(
+                            date: .abbreviated,
+                            time: .omitted
+                        )
+                    )
+                    LabeledContent("Data", value: "Local on this device")
+                    Text("Drawings, issues, and photos for this project stay on-device. They are not synced to Supabase yet.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Button("Switch Project") {
+                        projects.leaveWorkspace()
+                    }
+                    .accessibilityIdentifier("switchProjectButton")
                 }
 
                 Section("Account") {
@@ -56,6 +69,12 @@ struct MoreView: View {
                     }
                 }
 
+                Section {
+                    Text("Contractors and equipment are shared across your projects on this device.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section("App") {
                     LabeledContent("Name", value: "BTechnica")
                     LabeledContent("Mode", value: "Offline · local storage")
@@ -76,4 +95,5 @@ struct MoreView: View {
     MoreView()
         .environmentObject(AppStore())
         .environmentObject(AuthStore())
+        .environmentObject(ProjectsStore())
 }

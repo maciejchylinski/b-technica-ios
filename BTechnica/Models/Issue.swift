@@ -38,6 +38,8 @@ struct Issue: Codable, Identifiable, Equatable, Hashable {
     var pdfX: Double
     /// Pin Y in PDF page coordinates (origin bottom-left).
     var pdfY: Double
+    /// Optional link to a named polygon area on the same drawing/page (stable UUID).
+    var areaId: UUID?
     /// Stable project-wide display number (e.g. pin label `#3`).
     var number: Int
     var title: String
@@ -57,6 +59,7 @@ struct Issue: Codable, Identifiable, Equatable, Hashable {
          pageIndex: Int,
          pdfX: Double,
          pdfY: Double,
+         areaId: UUID? = nil,
          number: Int,
          title: String,
          details: String = "",
@@ -70,6 +73,7 @@ struct Issue: Codable, Identifiable, Equatable, Hashable {
         self.pageIndex = pageIndex
         self.pdfX = pdfX
         self.pdfY = pdfY
+        self.areaId = areaId
         self.number = number
         self.title = title
         self.details = details
@@ -87,6 +91,7 @@ struct Issue: Codable, Identifiable, Equatable, Hashable {
          drawingId: UUID,
          pageIndex: Int,
          point: PDFPoint,
+         areaId: UUID? = nil,
          number: Int,
          title: String,
          details: String = "",
@@ -100,6 +105,7 @@ struct Issue: Codable, Identifiable, Equatable, Hashable {
                   pageIndex: pageIndex,
                   pdfX: point.x,
                   pdfY: point.y,
+                  areaId: areaId,
                   number: number,
                   title: title,
                   details: details,
@@ -113,7 +119,7 @@ struct Issue: Codable, Identifiable, Equatable, Hashable {
     // MARK: - Codable
 
     private enum CodingKeys: String, CodingKey {
-        case id, drawingId, pageIndex, pdfX, pdfY, number, title, details, status
+        case id, drawingId, pageIndex, pdfX, pdfY, areaId, number, title, details, status
         case discipline, contractor, createdDate, photos
         /// Legacy keys from the foundation-only Issue model.
         case x, y
@@ -134,6 +140,7 @@ struct Issue: Codable, Identifiable, Equatable, Hashable {
         } else {
             pdfY = try c.decode(Double.self, forKey: .y)
         }
+        areaId = try c.decodeIfPresent(UUID.self, forKey: .areaId)
         number = try c.decodeIfPresent(Int.self, forKey: .number) ?? 0
         title = try c.decode(String.self, forKey: .title)
         details = try c.decodeIfPresent(String.self, forKey: .details) ?? ""
@@ -151,6 +158,7 @@ struct Issue: Codable, Identifiable, Equatable, Hashable {
         try c.encode(pageIndex, forKey: .pageIndex)
         try c.encode(pdfX, forKey: .pdfX)
         try c.encode(pdfY, forKey: .pdfY)
+        try c.encodeIfPresent(areaId, forKey: .areaId)
         try c.encode(number, forKey: .number)
         try c.encode(title, forKey: .title)
         try c.encode(details, forKey: .details)

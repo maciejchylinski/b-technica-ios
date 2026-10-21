@@ -13,6 +13,18 @@ struct PDFMarker: Equatable {
     var id: UUID? = nil
 }
 
+/// A filled polygon overlay anchored in PDF page coordinates.
+struct PDFAreaOverlay: Equatable {
+    var id: UUID?
+    var pageIndex: Int
+    var vertices: [PDFPoint]
+    var color: UIColor
+    var opacity: CGFloat
+    var isSelected: Bool = false
+    /// When true, draw an open polyline (draft) instead of a closed fill.
+    var isDraft: Bool = false
+}
+
 /// SwiftUI wrapper around `PDFKit.PDFView`.
 ///
 /// - Native pinch-to-zoom and pan come for free from `PDFView`.
@@ -23,17 +35,21 @@ struct PDFMarker: Equatable {
 ///     `PDFView.page(for:nearest:)` + `PDFView.convert(_:to:)` and are reported
 ///     through `onTap`;
 ///   - when capture is off, taps near a labelled marker with an `id` are
-///     reported through `onMarkerTap` (used for issue pins).
-/// - Markers (and a connecting line when two unlabelled markers share a page)
-///   are rendered as `PDFAnnotation`s, which PDFKit keeps aligned to the page.
+///     reported through `onMarkerTap` (used for issue pins);
+///   - otherwise taps inside a polygon overlay are reported through `onAreaTap`.
+/// - Markers and area polygons are rendered as `PDFAnnotation`s, which PDFKit
+///   keeps aligned to the page through zoom and pan.
 struct PDFKitView: UIViewRepresentable {
     let url: URL
     var captureEnabled: Bool = false
     var markers: [PDFMarker] = []
+    var areas: [PDFAreaOverlay] = []
     /// Reports (pageIndex, pointInPDFPageCoordinates) on tap while capturing.
     var onTap: ((Int, PDFPoint) -> Void)? = nil
     /// Reports the marker id when the user taps near a selectable pin.
     var onMarkerTap: ((UUID) -> Void)? = nil
+    /// Reports the area id when the user taps inside a selectable polygon.
+    var onAreaTap: ((UUID) -> Void)? = nil
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -87,7 +103,7 @@ struct PDFKitView: UIViewRepresentable {
         // Tap recognizer stays enabled so idle pin selection works too.
         context.coordinator.tapRecognizer?.isEnabled = true
         context.coordinator.loadDocumentIfNeeded(url: url, into: pdfView)
-        context.coordinator.render(markers: markers, on: pdfView)
+        context.coordinator.render(markers: markers, areas: areas, on: pdfView)
     }
 
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
@@ -98,6 +114,7 @@ struct PDFKitView: UIViewRepresentable {
 
         private var addedAnnotations: [(PDFPage, PDFAnnotation)] = []
         private var lastRenderedMarkers: [PDFMarker] = []
+        private var lastRenderedAreas: [PDFAreaOverlay] = []
         /// URL of the document currently shown (or being loaded).
         private var loadedURL: URL?
         private var loadID = UUID()
@@ -118,6 +135,7 @@ struct PDFKitView: UIViewRepresentable {
             loadedURL = url
             isLoading = true
             lastRenderedMarkers = []
+            lastRenderedAreas = []
             clearAnnotations()
 
             pdfView.document = nil
@@ -151,7 +169,8 @@ struct PDFKitView: UIViewRepresentable {
                     // Force annotation pass: updateUIView may have "rendered" while
                     // document was still nil and skipped drawing pins.
                     self.lastRenderedMarkers = []
-                    self.render(markers: self.parent.markers, on: pdfView)
+                    self.lastRenderedAreas = []
+                    self.render(markers: self.parent.markers, areas: self.parent.areas, on: pdfView)
                 }
             }
         }
@@ -172,14 +191,18 @@ struct PDFKitView: UIViewRepresentable {
                 return
             }
 
-            // Idle: hit-test against selectable (id-bearing) markers on this page.
-            if let id = hitTest(pageIndex: pageIndex, point: pdfPoint, page: page) {
+            // Idle: issue pins take priority over area polygons.
+            if let id = hitTestMarker(pageIndex: pageIndex, point: pdfPoint, page: page) {
                 parent.onMarkerTap?(id)
+                return
+            }
+            if let id = hitTestArea(pageIndex: pageIndex, point: pdfPoint) {
+                parent.onAreaTap?(id)
             }
         }
 
         /// Returns the id of the nearest labelled marker within hit radius, if any.
-        private func hitTest(pageIndex: Int, point: PDFPoint, page: PDFPage) -> UUID? {
+        private func hitTestMarker(pageIndex: Int, point: PDFPoint, page: PDFPage) -> UUID? {
             // Visual pins are small; keep a larger, comfortable tap target.
             let radius = max(markerRadius(for: page) * 3.5, 14)
             let radiusSq = radius * radius
@@ -199,20 +222,63 @@ struct PDFKitView: UIViewRepresentable {
             return best?.0
         }
 
+        /// Returns the id of the smallest non-draft area containing the point, if any.
+        private func hitTestArea(pageIndex: Int, point: PDFPoint) -> UUID? {
+            var best: (UUID, Double)?
+            for area in parent.areas {
+                guard let id = area.id, !area.isDraft, area.pageIndex == pageIndex,
+                      area.vertices.count >= 3 else { continue }
+                guard pointInPolygon(point, vertices: area.vertices) else { continue }
+                let areaSize = abs(polygonArea(area.vertices))
+                if best == nil || areaSize < best!.1 {
+                    best = (id, areaSize)
+                }
+            }
+            return best?.0
+        }
+
         // Let our tap coexist with PDFView's own gesture recognizers.
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
                                shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
             true
         }
 
-        func render(markers: [PDFMarker], on pdfView: PDFView) {
-            // Do not record markers as rendered until a document exists.
+        func render(markers: [PDFMarker], areas: [PDFAreaOverlay], on pdfView: PDFView) {
+            // Do not record overlays as rendered until a document exists.
             // Otherwise async load + early updateUIView skips pins forever.
             guard let document = pdfView.document else { return }
-            guard markers != lastRenderedMarkers else { return }
+            guard markers != lastRenderedMarkers || areas != lastRenderedAreas else { return }
             lastRenderedMarkers = markers
+            lastRenderedAreas = areas
 
             clearAnnotations()
+
+            // Areas under pins so issue markers stay visible on overlapping regions.
+            for area in areas {
+                guard area.pageIndex >= 0, area.pageIndex < document.pageCount,
+                      area.vertices.count >= 2,
+                      let page = document.page(at: area.pageIndex) else { continue }
+                let points = area.vertices.map(\.cgPoint)
+                let xs = points.map(\.x)
+                let ys = points.map(\.y)
+                let pad: CGFloat = area.isSelected ? 4 : 2
+                let bounds = CGRect(
+                    x: (xs.min() ?? 0) - pad,
+                    y: (ys.min() ?? 0) - pad,
+                    width: (xs.max() ?? 0) - (xs.min() ?? 0) + pad * 2,
+                    height: (ys.max() ?? 0) - (ys.min() ?? 0) + pad * 2
+                )
+                let annotation = PolygonAreaAnnotation(
+                    bounds: bounds,
+                    vertices: points,
+                    color: area.color,
+                    opacity: area.opacity,
+                    isSelected: area.isSelected,
+                    isDraft: area.isDraft
+                )
+                page.addAnnotation(annotation)
+                addedAnnotations.append((page, annotation))
+            }
 
             for marker in markers {
                 guard marker.pageIndex >= 0, marker.pageIndex < document.pageCount,
@@ -242,8 +308,11 @@ struct PDFKitView: UIViewRepresentable {
 
             // Draw a connecting line if exactly two unlabelled markers share a page
             // (calibration A↔B). Labelled issue pins must not get a joining line.
+            // Skip when a draft area polyline already connects the draft vertices.
+            let hasDraftArea = areas.contains { $0.isDraft }
             let calibrationMarkers = markers.filter { $0.label == nil }
-            if calibrationMarkers.count == 2,
+            if !hasDraftArea,
+               calibrationMarkers.count == 2,
                calibrationMarkers[0].pageIndex == calibrationMarkers[1].pageIndex,
                let page = document.page(at: calibrationMarkers[0].pageIndex) {
                 let a = calibrationMarkers[0].point.cgPoint
@@ -335,4 +404,103 @@ final class NumberedPinAnnotation: PDFAnnotation {
         )
         text.draw(in: textRect, withAttributes: attrs)
     }
+}
+
+/// Filled (or draft) polygon annotation in PDF page coordinates.
+final class PolygonAreaAnnotation: PDFAnnotation {
+    private let vertices: [CGPoint]
+    private let fillColor: UIColor
+    private let opacity: CGFloat
+    private let isSelected: Bool
+    private let isDraft: Bool
+
+    init(bounds: CGRect,
+         vertices: [CGPoint],
+         color: UIColor,
+         opacity: CGFloat,
+         isSelected: Bool,
+         isDraft: Bool) {
+        self.vertices = vertices
+        self.fillColor = color
+        self.opacity = opacity
+        self.isSelected = isSelected
+        self.isDraft = isDraft
+        super.init(bounds: bounds, forType: .ink, withProperties: nil)
+        self.color = color
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func draw(with box: PDFDisplayBox, in context: CGContext) {
+        guard vertices.count >= 2 else { return }
+        context.saveGState()
+        defer { context.restoreGState() }
+
+        let path = CGMutablePath()
+        path.move(to: vertices[0])
+        for point in vertices.dropFirst() {
+            path.addLine(to: point)
+        }
+
+        if isDraft {
+            if vertices.count >= 3 {
+                path.closeSubpath()
+                context.addPath(path)
+                context.setFillColor(fillColor.withAlphaComponent(max(0.12, opacity * 0.45)).cgColor)
+                context.fillPath()
+            }
+            let stroke = CGMutablePath()
+            stroke.move(to: vertices[0])
+            for point in vertices.dropFirst() {
+                stroke.addLine(to: point)
+            }
+            context.addPath(stroke)
+            context.setStrokeColor(fillColor.cgColor)
+            context.setLineWidth(isSelected ? 2.5 : 2)
+            context.setLineDash(phase: 0, lengths: [6, 4])
+            context.strokePath()
+            return
+        }
+
+        path.closeSubpath()
+        context.addPath(path)
+        context.setFillColor(fillColor.withAlphaComponent(opacity).cgColor)
+        context.fillPath()
+
+        context.addPath(path)
+        context.setStrokeColor(fillColor.cgColor)
+        context.setLineWidth(isSelected ? 3 : 1.75)
+        context.setLineJoin(CGLineJoin.round)
+        context.strokePath()
+    }
+}
+
+/// Ray-casting point-in-polygon test in PDF page coordinates.
+private func pointInPolygon(_ point: PDFPoint, vertices: [PDFPoint]) -> Bool {
+    guard vertices.count >= 3 else { return false }
+    var inside = false
+    var j = vertices.count - 1
+    for i in 0..<vertices.count {
+        let xi = vertices[i].x, yi = vertices[i].y
+        let xj = vertices[j].x, yj = vertices[j].y
+        let intersects = ((yi > point.y) != (yj > point.y))
+            && (point.x < (xj - xi) * (point.y - yi) / (yj - yi + 0.0000001) + xi)
+        if intersects { inside.toggle() }
+        j = i
+    }
+    return inside
+}
+
+/// Absolute polygon area (shoelace) used to prefer the smallest overlapping hit.
+private func polygonArea(_ vertices: [PDFPoint]) -> Double {
+    guard vertices.count >= 3 else { return 0 }
+    var sum = 0.0
+    for i in 0..<vertices.count {
+        let j = (i + 1) % vertices.count
+        sum += vertices[i].x * vertices[j].y
+        sum -= vertices[j].x * vertices[i].y
+    }
+    return sum / 2
 }

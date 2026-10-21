@@ -20,6 +20,7 @@ enum IssueReportGenerator {
         var drawingName: String
         var drawingRevision: String?
         var drawingLocation: String?
+        var areaName: String?
         var contractor: String?
         var discipline: String?
         var pageNumber: Int
@@ -152,6 +153,9 @@ enum IssueReportGenerator {
         }
         if let location = issue.drawingLocation, !location.isEmpty {
             y = drawLabeled("Location", value: location, at: y)
+        }
+        if let areaName = issue.areaName, !areaName.isEmpty {
+            y = drawLabeled("Area", value: areaName, at: y)
         }
         if let discipline = issue.discipline, !discipline.isEmpty {
             y = drawLabeled("Discipline", value: discipline, at: y)
@@ -310,6 +314,9 @@ enum IssueReportGenerator {
             height += 20
         }
         if let location = issue.drawingLocation, !location.isEmpty {
+            height += 20
+        }
+        if let areaName = issue.areaName, !areaName.isEmpty {
             height += 20
         }
         if let discipline = issue.discipline, !discipline.isEmpty {

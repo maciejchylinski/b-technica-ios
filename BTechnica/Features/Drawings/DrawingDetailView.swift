@@ -1,7 +1,8 @@
 import SwiftUI
 import UIKit
 
-/// Opens an imported PDF drawing and hosts scale calibration + issue placement.
+/// Opens an imported PDF drawing and hosts scale calibration, issue placement,
+/// and named polygon areas.
 ///
 /// Calibration flow:
 ///   1. User taps "Set scale".
@@ -16,6 +17,12 @@ import UIKit
 ///   3. Location is stored in PDF page coordinates (drawingId, pageIndex, pdfX, pdfY).
 ///   4. A simple form collects title / description / optional fields.
 ///   5. Issue is saved locally; a numbered pin appears on the PDF.
+///
+/// Area flow:
+///   1. User taps "Draw area".
+///   2. Consecutive taps append polygon vertices (same page, PDF coordinates).
+///   3. Finish (≥3 vertices) asks for name + color; Cancel discards the draft.
+///   4. Areas render as translucent filled polygons with outlines (PDF annotations).
 struct DrawingDetailView: View {
     @EnvironmentObject private var store: AppStore
     let drawingId: UUID
@@ -24,6 +31,7 @@ struct DrawingDetailView: View {
         case idle
         case calibrating(CalibStep)
         case placingIssue
+        case drawingArea
     }
 
     private enum CalibStep: Equatable {
@@ -41,8 +49,19 @@ struct DrawingDetailView: View {
     @State private var pendingPlacement: (page: Int, point: PDFPoint)?
     @State private var showIssueForm = false
 
+    /// Draft polygon vertices while drawing an area (all on one page).
+    @State private var draftAreaPage: Int?
+    @State private var draftAreaVertices: [PDFPoint] = []
+    @State private var showAreaForm = false
+    @State private var areaBeingEdited: Area?
+    @State private var showDeleteAreaConfirm = false
+
     /// Compact preview shown when an existing pin is tapped.
     @State private var previewIssueId: UUID?
+    /// Selected area preview (idle tap inside polygon).
+    @State private var previewAreaId: UUID?
+    /// Session toggle — hides all area overlays without changing stored `isVisible`.
+    @State private var showAreaOverlays = true
     /// Push Issue Detail from the preview card.
     @State private var issueToOpen: Issue?
     @State private var showDetailsEditor = false
@@ -56,17 +75,31 @@ struct DrawingDetailView: View {
         return store.issues(for: drawing).sorted { $0.number < $1.number }
     }
 
+    private var drawingAreas: [Area] {
+        guard let drawing else { return [] }
+        return store.areas(for: drawing).sorted { $0.createdDate < $1.createdDate }
+    }
+
     private var previewIssue: Issue? {
         guard let previewIssueId else { return nil }
         return store.issue(id: previewIssueId)
     }
 
+    private var previewArea: Area? {
+        guard let previewAreaId else { return nil }
+        return store.area(id: previewAreaId)
+    }
+
     private var isCapturing: Bool {
         switch mode {
-        case .placingIssue: return true
+        case .placingIssue, .drawingArea: return true
         case .calibrating(.tapA), .calibrating(.tapB): return true
         default: return false
         }
+    }
+
+    private var canFinishArea: Bool {
+        draftAreaVertices.count >= 3
     }
 
     var body: some View {
@@ -89,8 +122,10 @@ struct DrawingDetailView: View {
             PDFKitView(url: store.fileURL(for: drawing),
                        captureEnabled: isCapturing,
                        markers: allMarkers,
+                       areas: allAreaOverlays,
                        onTap: handleTap,
-                       onMarkerTap: handleMarkerTap)
+                       onMarkerTap: handleMarkerTap,
+                       onAreaTap: handleAreaTap)
                 .ignoresSafeArea(edges: .bottom)
 
             VStack(spacing: 10) {
@@ -105,9 +140,23 @@ struct DrawingDetailView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
 
+                if let area = previewArea, mode == .idle, previewIssue == nil {
+                    AreaPreviewCard(area: area) {
+                        areaBeingEdited = area
+                        showAreaForm = true
+                    } onDelete: {
+                        showDeleteAreaConfirm = true
+                    } onDismiss: {
+                        previewAreaId = nil
+                    }
+                    .padding(.horizontal)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+
                 overlay
             }
             .animation(.easeInOut(duration: 0.2), value: previewIssueId)
+            .animation(.easeInOut(duration: 0.2), value: previewAreaId)
         }
         .navigationTitle(drawing.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -128,17 +177,72 @@ struct DrawingDetailView: View {
             }
         }) {
             if let pending = pendingPlacement {
-                IssueFormView(pageIndex: pending.page, pageCount: drawing.pageCount, point: pending.point) { title, details, discipline, contractor, photos in
+                IssueFormView(
+                    drawingId: drawing.id,
+                    pageIndex: pending.page,
+                    pageCount: drawing.pageCount,
+                    point: pending.point
+                ) { title, details, discipline, contractor, areaId, photos in
                     saveIssue(title: title,
                               details: details,
                               discipline: discipline,
                               contractor: contractor,
+                              areaId: areaId,
                               photos: photos,
                               for: drawing)
                 } onCancel: {
                     showIssueForm = false
                 }
                 .presentationDetents([.medium, .large])
+            }
+        }
+        .sheet(isPresented: $showAreaForm, onDismiss: {
+            // Dismiss without save returns to drawing mode with the draft intact.
+            areaBeingEdited = nil
+        }) {
+            if let existing = areaBeingEdited {
+                AreaFormView(
+                    title: "Edit area",
+                    confirmTitle: "Save",
+                    initialName: existing.name,
+                    initialColor: existing.color
+                ) { name, color in
+                    store.updateAreaDetails(id: existing.id, name: name, color: color)
+                    previewAreaId = existing.id
+                    showAreaForm = false
+                    areaBeingEdited = nil
+                } onCancel: {
+                    showAreaForm = false
+                    areaBeingEdited = nil
+                }
+                .presentationDetents([.medium])
+            } else {
+                AreaFormView(
+                    title: "Name area",
+                    confirmTitle: "Save area"
+                ) { name, color in
+                    saveArea(name: name, color: color, for: drawing)
+                } onCancel: {
+                    showAreaForm = false
+                }
+                .presentationDetents([.medium])
+            }
+        }
+        .confirmationDialog(
+            "Delete this area?",
+            isPresented: $showDeleteAreaConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Delete area", role: .destructive) {
+                if let area = previewArea {
+                    store.deleteArea(area)
+                    previewAreaId = nil
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            if let area = previewArea {
+                Text("“\(area.name)” will be removed from this drawing.")
             }
         }
         .sheet(isPresented: $showDetailsEditor) {
@@ -156,11 +260,21 @@ struct DrawingDetailView: View {
             case .idle:
                 Button("Add issue") { startPlacingIssue() }
                 Menu {
+                    Button("Draw area") { startDrawingArea() }
+                    Button(showAreaOverlays ? "Hide areas" : "Show areas") {
+                        showAreaOverlays.toggle()
+                        if !showAreaOverlays { previewAreaId = nil }
+                    }
+                    Divider()
                     Button("Set scale") { startCalibration() }
                     Button("Edit drawing details") { showDetailsEditor = true }
                 } label: {
                     Label("More", systemImage: "ellipsis.circle")
                 }
+            case .drawingArea:
+                Button("Finish") { finishDrawingArea() }
+                    .disabled(!canFinishArea)
+                Button("Cancel", role: .cancel) { cancelActiveMode() }
             case .placingIssue, .calibrating:
                 Button("Cancel", role: .cancel) { cancelActiveMode() }
             }
@@ -174,6 +288,12 @@ struct DrawingDetailView: View {
         switch mode {
         case .placingIssue:
             instructionBar("Tap a point on the drawing to place the issue")
+        case .drawingArea:
+            instructionBar(
+                canFinishArea
+                    ? "Tap to add points · Finish when ready (\(draftAreaVertices.count))"
+                    : "Tap consecutive points to draw the area (\(draftAreaVertices.count)/3)"
+            )
         case .calibrating(.tapA):
             instructionBar("Tap point A on the drawing")
         case .calibrating(.tapB):
@@ -200,9 +320,9 @@ struct DrawingDetailView: View {
         .shadow(radius: 6, y: 3)
     }
 
-    // MARK: - Markers
+    // MARK: - Markers & areas
 
-    /// Calibration markers + saved issue pins (and a temporary pending pin).
+    /// Calibration markers + saved issue pins (and a temporary pending pin / draft vertices).
     private var allMarkers: [PDFMarker] {
         var result: [PDFMarker] = []
 
@@ -221,6 +341,12 @@ struct DrawingDetailView: View {
                                     label: "+"))
         }
 
+        if mode == .drawingArea, let page = draftAreaPage {
+            for vertex in draftAreaVertices {
+                result.append(PDFMarker(pageIndex: page, point: vertex, color: .systemBlue))
+            }
+        }
+
         if let a = pointA {
             result.append(PDFMarker(pageIndex: a.page, point: a.point, color: .systemBlue))
         }
@@ -230,18 +356,65 @@ struct DrawingDetailView: View {
         return result
     }
 
+    private var allAreaOverlays: [PDFAreaOverlay] {
+        var result: [PDFAreaOverlay] = []
+
+        if showAreaOverlays {
+            for area in drawingAreas where area.isVisible {
+                result.append(PDFAreaOverlay(
+                    id: area.id,
+                    pageIndex: area.pageIndex,
+                    vertices: area.vertices,
+                    color: area.uiColor,
+                    opacity: CGFloat(area.opacity),
+                    isSelected: area.id == previewAreaId,
+                    isDraft: false
+                ))
+            }
+        }
+
+        if mode == .drawingArea,
+           let page = draftAreaPage,
+           draftAreaVertices.count >= 2 {
+            result.append(PDFAreaOverlay(
+                id: nil,
+                pageIndex: page,
+                vertices: draftAreaVertices,
+                color: .systemBlue,
+                opacity: CGFloat(Area.defaultOpacity),
+                isSelected: false,
+                isDraft: true
+            ))
+        }
+
+        return result
+    }
+
     // MARK: - Mode transitions
 
     private func startPlacingIssue() {
         previewIssueId = nil
+        previewAreaId = nil
         resetCalibrationPoints()
+        clearAreaDraft()
         pendingPlacement = nil
         mode = .placingIssue
     }
 
+    private func startDrawingArea() {
+        previewIssueId = nil
+        previewAreaId = nil
+        pendingPlacement = nil
+        resetCalibrationPoints()
+        clearAreaDraft()
+        mode = .drawingArea
+    }
+
     private func startCalibration() {
         previewIssueId = nil
+        previewAreaId = nil
         pendingPlacement = nil
+        clearAreaDraft()
         pointA = nil
         pointB = nil
         mode = .calibrating(.tapA)
@@ -253,11 +426,26 @@ struct DrawingDetailView: View {
             pendingPlacement = nil
             showIssueForm = false
             mode = .idle
+        case .drawingArea:
+            clearAreaDraft()
+            showAreaForm = false
+            mode = .idle
         case .calibrating:
             resetCalibration()
         case .idle:
             break
         }
+    }
+
+    private func finishDrawingArea() {
+        guard canFinishArea else { return }
+        areaBeingEdited = nil
+        showAreaForm = true
+    }
+
+    private func clearAreaDraft() {
+        draftAreaPage = nil
+        draftAreaVertices = []
     }
 
     private func resetCalibration() {
@@ -278,6 +466,14 @@ struct DrawingDetailView: View {
         case .placingIssue:
             pendingPlacement = (pageIndex, point)
             showIssueForm = true
+        case .drawingArea:
+            if let draftPage = draftAreaPage, draftPage != pageIndex {
+                return
+            }
+            if draftAreaPage == nil {
+                draftAreaPage = pageIndex
+            }
+            draftAreaVertices.append(point)
         case .calibrating(.tapA):
             pointA = (pageIndex, point)
             mode = .calibrating(.tapB)
@@ -293,7 +489,14 @@ struct DrawingDetailView: View {
 
     private func handleMarkerTap(_ id: UUID) {
         guard mode == .idle else { return }
+        previewAreaId = nil
         previewIssueId = id
+    }
+
+    private func handleAreaTap(_ id: UUID) {
+        guard mode == .idle, showAreaOverlays else { return }
+        previewIssueId = nil
+        previewAreaId = id
     }
 
     // MARK: - Persistence
@@ -302,12 +505,14 @@ struct DrawingDetailView: View {
                            details: String,
                            discipline: String?,
                            contractor: String?,
+                           areaId: UUID?,
                            photos: [UIImage] = [],
                            for drawing: Drawing) {
         guard let pending = pendingPlacement else { return }
         let issue = Issue(drawingId: drawing.id,
                           pageIndex: pending.page,
                           point: pending.point,
+                          areaId: areaId,
                           number: store.nextIssueNumber(),
                           title: title,
                           details: details,
@@ -322,6 +527,23 @@ struct DrawingDetailView: View {
         showIssueForm = false
         mode = .idle
         previewIssueId = issue.id
+    }
+
+    private func saveArea(name: String, color: String, for drawing: Drawing) {
+        guard let page = draftAreaPage, draftAreaVertices.count >= 3 else { return }
+        let area = Area(
+            projectId: store.projectId,
+            drawingId: drawing.id,
+            pageIndex: page,
+            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+            vertices: draftAreaVertices,
+            color: color
+        )
+        store.addArea(area)
+        clearAreaDraft()
+        showAreaForm = false
+        mode = .idle
+        previewAreaId = area.id
     }
 
     private func saveCalibration(value: Double, unit: LengthUnit, for drawing: Drawing) {
@@ -378,6 +600,56 @@ private struct IssuePreviewCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .onTapGesture(perform: onOpen)
+
+            Button(action: onDismiss) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title3)
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .shadow(radius: 6, y: 3)
+    }
+}
+
+/// Compact card for a selected polygon area (rename / delete).
+private struct AreaPreviewCard: View {
+    let area: Area
+    var onRename: () -> Void
+    var onDelete: () -> Void
+    var onDismiss: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color(uiColor: area.uiColor).opacity(area.opacity))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(Color(uiColor: area.uiColor), lineWidth: 2)
+                }
+                .frame(width: 36, height: 36)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(area.name)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                Text("\(area.vertices.count) points · page \(area.pageIndex + 1)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                HStack(spacing: 16) {
+                    Button("Rename", action: onRename)
+                        .font(.caption.weight(.semibold))
+                    Button("Delete", role: .destructive, action: onDelete)
+                        .font(.caption.weight(.semibold))
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Button(action: onDismiss) {
                 Image(systemName: "xmark.circle.fill")

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Edit title, details, status, contractor and discipline for an existing issue.
+/// Edit title, details, status, contractor, discipline and area for an existing issue.
 struct IssueEditor: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
@@ -12,6 +12,9 @@ struct IssueEditor: View {
     @State private var status: IssueStatus = .open
     @State private var selectedDisciplineName = ""
     @State private var selectedContractorName = ""
+    @State private var selectedAreaId: UUID?
+    @State private var drawingId: UUID?
+    @State private var pageIndex: Int = 0
     @State private var showAddDiscipline = false
     @State private var showAddContractor = false
     @State private var newDisciplineName = ""
@@ -33,6 +36,11 @@ struct IssueEditor: View {
         }
     }
 
+    private var availableAreas: [Area] {
+        guard let drawingId else { return [] }
+        return store.areas(forDrawingId: drawingId, pageIndex: pageIndex)
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -51,6 +59,24 @@ struct IssueEditor: View {
                     }
                 } footer: {
                     Text("Open and In progress count as active. Resolved and Closed are done.")
+                }
+
+                Section {
+                    if availableAreas.isEmpty {
+                        Text("No areas on this page yet.")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Picker("Area", selection: $selectedAreaId) {
+                            Text("None").tag(Optional<UUID>.none)
+                            ForEach(availableAreas) { area in
+                                Text(area.name).tag(Optional(area.id))
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Area")
+                } footer: {
+                    Text("Optional. Only areas on this issue’s drawing page are listed.")
                 }
 
                 Section {
@@ -146,16 +172,30 @@ struct IssueEditor: View {
         status = issue.status
         selectedDisciplineName = issue.discipline ?? ""
         selectedContractorName = issue.contractor ?? ""
+        drawingId = issue.drawingId
+        pageIndex = issue.pageIndex
+        // Drop stale links if the area was removed or moved off this page.
+        if let areaId = issue.areaId,
+           store.areas(forDrawingId: issue.drawingId, pageIndex: issue.pageIndex)
+            .contains(where: { $0.id == areaId }) {
+            selectedAreaId = areaId
+        } else {
+            selectedAreaId = nil
+        }
     }
 
     private func save() {
+        let areaId = selectedAreaId.flatMap { id in
+            availableAreas.contains(where: { $0.id == id }) ? id : nil
+        }
         store.updateIssueDetails(
             id: issueId,
             title: title,
             details: details,
             status: status,
             discipline: selectedDisciplineName.isEmpty ? nil : selectedDisciplineName,
-            contractor: selectedContractorName.isEmpty ? nil : selectedContractorName
+            contractor: selectedContractorName.isEmpty ? nil : selectedContractorName,
+            areaId: areaId
         )
         dismiss()
     }

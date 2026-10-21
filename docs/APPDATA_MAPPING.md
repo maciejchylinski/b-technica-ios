@@ -81,6 +81,7 @@ Cloud splits that into logical drawing / revision / pages.
 | `drawingId` | `drawing_id` (optional in schema; present for current data) |
 | `pageIndex` | Resolve to `page_id` on current revision |
 | `pdfX` / `pdfY` | `pdf_x` / `pdf_y` (unchanged doubles) |
+| `areaId` (optional UUID) | `area_id` (preserve UUID; null when unassigned) |
 | `discipline` (string) | Resolve/create `disciplines` → `discipline_id`; also copy into `discipline_name` |
 | `contractor` (string) | Resolve/create `contractors` → `contractor_id`; also copy into `contractor_name` |
 | `createdDate` | `created_at` |
@@ -129,11 +130,24 @@ Optional: create `equipment_project_assignments` linking each item to the import
 | `Contractor.id/name/notes/createdDate` | `contractors` with `owner_id` |
 | `Discipline.id/name/createdDate` | `disciplines` with `owner_id` |
 
+## Areas (local → cloud)
+
+| Swift `Area` | Supabase `areas` |
+|---|---|
+| `id` | `id` (preserve UUID) |
+| `projectId` | `project_id` |
+| `drawingId` | `drawing_id` |
+| `pageIndex` (0-based) | `page_id` → resolve via `drawing_pages` |
+| `name` | `name` |
+| `vertices` `[PDFPoint]` | `vertices` jsonb `[{x,y},…]` (≥3, PDF page coords) |
+| `color` (`#RRGGBB`) | `color` |
+| `opacity` | `opacity` |
+| `isVisible` | `is_visible` |
+| `createdDate` / `updatedDate` | `created_at` / `updated_at` |
+
 ## New cloud-only concepts (no local source yet)
 
-- `drawing_folders` — empty on first import
 - `drawing_revisions` history beyond the single current PDF
-- `areas` — empty on first import
 - `issue_types` — seed a default type per project if desired
 - `deleted_at` — null for all imported rows
 

@@ -2,8 +2,8 @@ import Foundation
 
 /// Current on-disk document schema. Bump when making breaking `AppData` / model changes.
 enum AppDataSchema {
-    /// v2: nested `drawingFolders` + optional `Drawing.folderId`.
-    static let current = 2
+    /// v3: named polygon `areas` on drawings (PDF page coordinates).
+    static let current = 3
 }
 
 /// In-memory root document for one local project workspace plus user-global
@@ -19,6 +19,8 @@ struct AppData: Codable {
     var drawingFolders: [DrawingFolder]
     var drawings: [Drawing]
     var issues: [Issue]
+    /// Named polygon areas on drawings (local; IDs match Supabase `areas` shape).
+    var areas: [Area]
     var equipment: [EquipmentItem]
     /// Local contractor dictionary (picker options).
     var contractors: [Contractor]
@@ -29,6 +31,7 @@ struct AppData: Codable {
          drawingFolders: [DrawingFolder] = [],
          drawings: [Drawing] = [],
          issues: [Issue] = [],
+         areas: [Area] = [],
          equipment: [EquipmentItem] = [],
          contractors: [Contractor] = [],
          disciplines: [Discipline] = [],
@@ -38,6 +41,7 @@ struct AppData: Codable {
         self.drawingFolders = drawingFolders
         self.drawings = drawings
         self.issues = issues
+        self.areas = areas
         self.equipment = equipment
         self.contractors = contractors
         self.disciplines = disciplines
@@ -46,7 +50,7 @@ struct AppData: Codable {
     // MARK: - Codable (backward compatible with older appdata.json)
 
     private enum CodingKeys: String, CodingKey {
-        case schemaVersion, project, drawingFolders, drawings, issues, equipment, contractors, disciplines
+        case schemaVersion, project, drawingFolders, drawings, issues, areas, equipment, contractors, disciplines
     }
 
     init(from decoder: Decoder) throws {
@@ -57,6 +61,7 @@ struct AppData: Codable {
         drawingFolders = try c.decodeIfPresent([DrawingFolder].self, forKey: .drawingFolders) ?? []
         drawings = try c.decodeIfPresent([Drawing].self, forKey: .drawings) ?? []
         issues = try c.decodeIfPresent([Issue].self, forKey: .issues) ?? []
+        areas = try c.decodeIfPresent([Area].self, forKey: .areas) ?? []
         equipment = try c.decodeIfPresent([EquipmentItem].self, forKey: .equipment) ?? []
         contractors = try c.decodeIfPresent([Contractor].self, forKey: .contractors) ?? []
         disciplines = try c.decodeIfPresent([Discipline].self, forKey: .disciplines) ?? []
@@ -69,6 +74,7 @@ struct AppData: Codable {
         try c.encode(drawingFolders, forKey: .drawingFolders)
         try c.encode(drawings, forKey: .drawings)
         try c.encode(issues, forKey: .issues)
+        try c.encode(areas, forKey: .areas)
         try c.encode(equipment, forKey: .equipment)
         try c.encode(contractors, forKey: .contractors)
         try c.encode(disciplines, forKey: .disciplines)

@@ -7,10 +7,12 @@ import UniformTypeIdentifiers
 struct IssueFormView: View {
     @EnvironmentObject private var store: AppStore
 
+    let drawingId: UUID
     let pageIndex: Int
     let pageCount: Int
     let point: PDFPoint
-    var onSave: (String, String, String?, String?, [UIImage]) -> Void
+    /// title, details, discipline, contractor, areaId, photos
+    var onSave: (String, String, String?, String?, UUID?, [UIImage]) -> Void
     var onCancel: () -> Void
 
     @State private var title: String = ""
@@ -19,6 +21,8 @@ struct IssueFormView: View {
     @State private var selectedDisciplineName: String = ""
     /// Empty string means "None".
     @State private var selectedContractorName: String = ""
+    /// Optional area assignment (stable UUID); nil means none.
+    @State private var selectedAreaId: UUID?
     @State private var showAddDiscipline = false
     @State private var showAddContractor = false
     @State private var newDisciplineName = ""
@@ -47,6 +51,10 @@ struct IssueFormView: View {
         }
     }
 
+    private var availableAreas: [Area] {
+        store.areas(forDrawingId: drawingId, pageIndex: pageIndex)
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -63,6 +71,24 @@ struct IssueFormView: View {
                     } else {
                         Text("Status defaults to Open. The pin is saved on this drawing.")
                     }
+                }
+
+                Section {
+                    if availableAreas.isEmpty {
+                        Text("No areas on this page yet.")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Picker("Area", selection: $selectedAreaId) {
+                            Text("None").tag(Optional<UUID>.none)
+                            ForEach(availableAreas) { area in
+                                Text(area.name).tag(Optional(area.id))
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Area")
+                } footer: {
+                    Text("Optional. Only areas on this drawing page are listed. Assignment is manual.")
                 }
 
                 Section {
@@ -226,7 +252,10 @@ struct IssueFormView: View {
         let discipline = selectedDisciplineName.isEmpty ? nil : selectedDisciplineName
         let contractor = selectedContractorName.isEmpty ? nil : selectedContractorName
         let images = pendingPhotos.map(\.image)
-        onSave(trimmedTitle, trimmedDetails, discipline, contractor, images)
+        let areaId = selectedAreaId.flatMap { id in
+            availableAreas.contains(where: { $0.id == id }) ? id : nil
+        }
+        onSave(trimmedTitle, trimmedDetails, discipline, contractor, areaId, images)
     }
 
     private func openCamera() {

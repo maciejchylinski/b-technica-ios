@@ -8,7 +8,7 @@ import CoreGraphics
 /// persisted independently of any screen / view geometry. This is the
 /// foundation for future measurements and issue pins, which must all be
 /// anchored to the drawing itself rather than to the device screen.
-struct PDFPoint: Codable, Equatable {
+struct PDFPoint: Codable, Equatable, Hashable {
     var x: Double
     var y: Double
 

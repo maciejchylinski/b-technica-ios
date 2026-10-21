@@ -147,6 +147,7 @@ final class AppStore: ObservableObject {
             drawingFolders: projectLocal.drawingFolders,
             drawings: projectLocal.drawings,
             issues: projectLocal.issues,
+            areas: projectLocal.areas,
             equipment: shared.equipment,
             contractors: shared.contractors,
             disciplines: shared.disciplines,
@@ -243,6 +244,10 @@ final class AppStore: ObservableObject {
             copy.drawings[index].projectId = expectedProjectId
             changed = true
         }
+        for index in copy.areas.indices where copy.areas[index].projectId != expectedProjectId {
+            copy.areas[index].projectId = expectedProjectId
+            changed = true
+        }
 
         let folderIds = Set(copy.drawingFolders.map(\.id))
         // Drop broken parent links (treat as root) and clear orphan drawing folder refs.
@@ -256,6 +261,23 @@ final class AppStore: ObservableObject {
         for index in copy.drawings.indices {
             if let folderId = copy.drawings[index].folderId, !folderIds.contains(folderId) {
                 copy.drawings[index].folderId = nil
+                changed = true
+            }
+        }
+
+        let drawingIds = Set(copy.drawings.map(\.id))
+        let validAreas = copy.areas.filter {
+            $0.vertices.count >= 3 && drawingIds.contains($0.drawingId)
+        }
+        if validAreas.count != copy.areas.count {
+            copy.areas = validAreas
+            changed = true
+        }
+
+        let areaIds = Set(copy.areas.map(\.id))
+        for index in copy.issues.indices {
+            if let linked = copy.issues[index].areaId, !areaIds.contains(linked) {
+                copy.issues[index].areaId = nil
                 changed = true
             }
         }
@@ -550,6 +572,7 @@ final class AppStore: ObservableObject {
         }
         data.drawings.removeAll { $0.id == drawing.id }
         data.issues.removeAll { $0.drawingId == drawing.id }
+        data.areas.removeAll { $0.drawingId == drawing.id }
         persist()
         return nil
     }
@@ -587,7 +610,8 @@ final class AppStore: ObservableObject {
                             details: String,
                             status: IssueStatus,
                             discipline: String?,
-                            contractor: String?) {
+                            contractor: String?,
+                            areaId: UUID?) {
         guard let index = data.issues.firstIndex(where: { $0.id == id }) else { return }
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else { return }
@@ -598,6 +622,16 @@ final class AppStore: ObservableObject {
         data.issues[index].discipline = (trimmedDiscipline?.isEmpty == false) ? trimmedDiscipline : nil
         let trimmedContractor = contractor?.trimmingCharacters(in: .whitespacesAndNewlines)
         data.issues[index].contractor = (trimmedContractor?.isEmpty == false) ? trimmedContractor : nil
+        // Only accept areas on the same drawing/page; nil clears the assignment.
+        if let areaId {
+            let issue = data.issues[index]
+            let matches = data.areas.contains {
+                $0.id == areaId && $0.drawingId == issue.drawingId && $0.pageIndex == issue.pageIndex
+            }
+            data.issues[index].areaId = matches ? areaId : nil
+        } else {
+            data.issues[index].areaId = nil
+        }
         persist()
     }
 
@@ -621,6 +655,57 @@ final class AppStore: ObservableObject {
     /// Next project-wide issue number (1-based, stable after assignment).
     func nextIssueNumber() -> Int {
         (data.issues.map(\.number).max() ?? 0) + 1
+    }
+
+    // MARK: - Areas
+
+    func addArea(_ area: Area) {
+        guard area.vertices.count >= 3 else { return }
+        data.areas.append(area)
+        persist()
+    }
+
+    func updateArea(_ area: Area) {
+        guard area.vertices.count >= 3,
+              let index = data.areas.firstIndex(where: { $0.id == area.id }) else { return }
+        var updated = area
+        updated.updatedDate = Date()
+        data.areas[index] = updated
+        persist()
+    }
+
+    /// Renames an area and optionally updates its color. Geometry stays as stored.
+    func updateAreaDetails(id: UUID, name: String, color: String) {
+        guard let index = data.areas.firstIndex(where: { $0.id == id }) else { return }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        data.areas[index].name = trimmed
+        data.areas[index].color = color
+        data.areas[index].updatedDate = Date()
+        persist()
+    }
+
+    func deleteArea(_ area: Area) {
+        data.areas.removeAll { $0.id == area.id }
+        for index in data.issues.indices where data.issues[index].areaId == area.id {
+            data.issues[index].areaId = nil
+        }
+        persist()
+    }
+
+    func area(id: UUID) -> Area? {
+        data.areas.first { $0.id == id }
+    }
+
+    func areas(for drawing: Drawing) -> [Area] {
+        data.areas.filter { $0.drawingId == drawing.id }
+    }
+
+    /// Areas on a specific drawing page, sorted by name (for issue assignment pickers).
+    func areas(forDrawingId drawingId: UUID, pageIndex: Int) -> [Area] {
+        data.areas
+            .filter { $0.drawingId == drawingId && $0.pageIndex == pageIndex }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     // MARK: - Contractors dictionary
@@ -968,6 +1053,7 @@ final class AppStore: ObservableObject {
                 drawingFolders: data.drawingFolders,
                 drawings: data.drawings,
                 issues: data.issues,
+                areas: data.areas,
                 schemaVersion: data.schemaVersion
             )
             let shared = UserSharedData(
@@ -1029,6 +1115,7 @@ final class AppStore: ObservableObject {
                     drawingFolders: legacy.drawingFolders,
                     drawings: legacy.drawings,
                     issues: legacy.issues,
+                    areas: legacy.areas,
                     schemaVersion: legacy.schemaVersion
                 )
             )

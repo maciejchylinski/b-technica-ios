@@ -252,6 +252,7 @@ struct ReportsView: View {
         let blocks: [IssueReportGenerator.IssueBlock] = filteredIssues.map { issue in
             let photos = issue.photos.compactMap { store.image(for: $0) }
             let drawing = drawing(for: issue)
+            let areaName = issue.areaId.flatMap { store.area(id: $0)?.name }
             return IssueReportGenerator.IssueBlock(
                 number: issue.number,
                 title: issue.title,
@@ -260,6 +261,7 @@ struct ReportsView: View {
                 drawingName: drawing?.name ?? "Unknown drawing",
                 drawingRevision: drawing?.displayRevision,
                 drawingLocation: drawing?.displayLocation,
+                areaName: areaName,
                 contractor: issue.contractor,
                 discipline: issue.discipline,
                 pageNumber: issue.pageIndex + 1,

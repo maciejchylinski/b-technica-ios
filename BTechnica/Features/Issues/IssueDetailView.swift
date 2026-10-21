@@ -31,6 +31,11 @@ struct IssueDetailView: View {
         drawing?.name ?? "Unknown drawing"
     }
 
+    private var assignedAreaName: String? {
+        guard let issue, let areaId = issue.areaId else { return nil }
+        return store.area(id: areaId)?.name
+    }
+
     var body: some View {
         Group {
             if let issue {
@@ -48,6 +53,7 @@ struct IssueDetailView: View {
                         if drawing?.isMultiPage == true {
                             LabeledContent("Page", value: "\(issue.pageIndex + 1)")
                         }
+                        LabeledContent("Area", value: assignedAreaName ?? "None")
                     }
 
                     Section("Details") {

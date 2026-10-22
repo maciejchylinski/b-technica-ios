@@ -25,6 +25,13 @@ struct PDFAreaOverlay: Equatable {
     var isDraft: Bool = false
 }
 
+/// A polygon vertex that can be dragged while editing area geometry.
+struct PDFEditableVertex: Equatable {
+    var index: Int
+    var pageIndex: Int
+    var point: PDFPoint
+}
+
 /// SwiftUI wrapper around `PDFKit.PDFView`.
 ///
 /// - Native pinch-to-zoom and pan come for free from `PDFView`.
@@ -37,6 +44,8 @@ struct PDFAreaOverlay: Equatable {
 ///   - when capture is off, taps near a labelled marker with an `id` are
 ///     reported through `onMarkerTap` (used for issue pins);
 ///   - otherwise taps inside a polygon overlay are reported through `onAreaTap`.
+/// - When `editableVertices` is non-empty, a pan near a vertex reports moves
+///   through `onVertexDrag` in PDF page coordinates (PDF scroll paused while dragging).
 /// - Markers and area polygons are rendered as `PDFAnnotation`s, which PDFKit
 ///   keeps aligned to the page through zoom and pan.
 struct PDFKitView: UIViewRepresentable {
@@ -44,12 +53,16 @@ struct PDFKitView: UIViewRepresentable {
     var captureEnabled: Bool = false
     var markers: [PDFMarker] = []
     var areas: [PDFAreaOverlay] = []
+    /// Vertices that can be dragged (shape-edit mode). Empty disables vertex drag.
+    var editableVertices: [PDFEditableVertex] = []
     /// Reports (pageIndex, pointInPDFPageCoordinates) on tap while capturing.
     var onTap: ((Int, PDFPoint) -> Void)? = nil
     /// Reports the marker id when the user taps near a selectable pin.
     var onMarkerTap: ((UUID) -> Void)? = nil
     /// Reports the area id when the user taps inside a selectable polygon.
     var onAreaTap: ((UUID) -> Void)? = nil
+    /// Reports (vertexIndex, pointInPDFPageCoordinates) while dragging a vertex.
+    var onVertexDrag: ((Int, PDFPoint) -> Void)? = nil
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -89,6 +102,14 @@ struct PDFKitView: UIViewRepresentable {
         tap.delegate = context.coordinator
         pdfView.addGestureRecognizer(tap)
         context.coordinator.tapRecognizer = tap
+
+        let pan = UIPanGestureRecognizer(target: context.coordinator,
+                                         action: #selector(Coordinator.handlePan(_:)))
+        pan.delegate = context.coordinator
+        pan.maximumNumberOfTouches = 1
+        pdfView.addGestureRecognizer(pan)
+        context.coordinator.panRecognizer = pan
+
         context.coordinator.spinner = spinner
         context.coordinator.errorLabel = errorLabel
 
@@ -102,6 +123,7 @@ struct PDFKitView: UIViewRepresentable {
         context.coordinator.parent = self
         // Tap recognizer stays enabled so idle pin selection works too.
         context.coordinator.tapRecognizer?.isEnabled = true
+        context.coordinator.panRecognizer?.isEnabled = !editableVertices.isEmpty
         context.coordinator.loadDocumentIfNeeded(url: url, into: pdfView)
         context.coordinator.render(markers: markers, areas: areas, on: pdfView)
     }
@@ -109,6 +131,7 @@ struct PDFKitView: UIViewRepresentable {
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         var parent: PDFKitView
         var tapRecognizer: UITapGestureRecognizer?
+        var panRecognizer: UIPanGestureRecognizer?
         var spinner: UIActivityIndicatorView?
         var errorLabel: UILabel?
 
@@ -119,6 +142,8 @@ struct PDFKitView: UIViewRepresentable {
         private var loadedURL: URL?
         private var loadID = UUID()
         private var isLoading = false
+        private var draggingVertexIndex: Int?
+        private var draggingPageIndex: Int?
 
         init(_ parent: PDFKitView) {
             self.parent = parent
@@ -191,6 +216,9 @@ struct PDFKitView: UIViewRepresentable {
                 return
             }
 
+            // Shape edit: taps do not select pins/areas (drag handles vertices instead).
+            if !parent.editableVertices.isEmpty { return }
+
             // Idle: issue pins take priority over area polygons.
             if let id = hitTestMarker(pageIndex: pageIndex, point: pdfPoint, page: page) {
                 parent.onMarkerTap?(id)
@@ -199,6 +227,41 @@ struct PDFKitView: UIViewRepresentable {
             if let id = hitTestArea(pageIndex: pageIndex, point: pdfPoint) {
                 parent.onAreaTap?(id)
             }
+        }
+
+        @objc func handlePan(_ recognizer: UIPanGestureRecognizer) {
+            guard let pdfView = recognizer.view as? PDFView,
+                  let document = pdfView.document else { return }
+
+            switch recognizer.state {
+            case .began:
+                // Index set in gestureRecognizerShouldBegin.
+                setPDFScrollEnabled(false, on: pdfView)
+            case .changed:
+                guard let index = draggingVertexIndex,
+                      let pageIndex = draggingPageIndex,
+                      pageIndex >= 0, pageIndex < document.pageCount,
+                      let page = document.page(at: pageIndex) else { return }
+                let viewPoint = recognizer.location(in: pdfView)
+                let pagePoint = PDFPoint(pdfView.convert(viewPoint, to: page))
+                parent.onVertexDrag?(index, pagePoint)
+            case .ended, .cancelled, .failed:
+                draggingVertexIndex = nil
+                draggingPageIndex = nil
+                setPDFScrollEnabled(true, on: pdfView)
+            default:
+                break
+            }
+        }
+
+        private func setPDFScrollEnabled(_ enabled: Bool, on pdfView: PDFView) {
+            func visit(_ view: UIView) {
+                if let scroll = view as? UIScrollView {
+                    scroll.isScrollEnabled = enabled
+                }
+                for child in view.subviews { visit(child) }
+            }
+            visit(pdfView)
         }
 
         /// Returns the id of the nearest labelled marker within hit radius, if any.
@@ -237,10 +300,51 @@ struct PDFKitView: UIViewRepresentable {
             return best?.0
         }
 
-        // Let our tap coexist with PDFView's own gesture recognizers.
+        /// Vertex pan begins only when the touch starts near an editable vertex.
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard gestureRecognizer == panRecognizer else { return true }
+            guard !parent.editableVertices.isEmpty,
+                  let pdfView = gestureRecognizer.view as? PDFView,
+                  let document = pdfView.document else { return false }
+
+            let viewPoint = gestureRecognizer.location(in: pdfView)
+            guard let page = pdfView.page(for: viewPoint, nearest: true) else { return false }
+            let pageIndex = document.index(for: page)
+            let pdfPoint = PDFPoint(pdfView.convert(viewPoint, to: page))
+            guard let index = hitTestEditableVertex(pageIndex: pageIndex, point: pdfPoint, page: page) else {
+                return false
+            }
+            draggingVertexIndex = index
+            draggingPageIndex = pageIndex
+            return true
+        }
+
+        // Let taps coexist with PDFView; vertex pan stays exclusive while active.
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
                                shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
-            true
+            if gestureRecognizer == panRecognizer || other == panRecognizer {
+                return draggingVertexIndex == nil
+            }
+            return true
+        }
+
+        /// Returns the index of the nearest editable vertex within hit radius, if any.
+        private func hitTestEditableVertex(pageIndex: Int, point: PDFPoint, page: PDFPage) -> Int? {
+            let radius = max(markerRadius(for: page) * 4, 16)
+            let radiusSq = radius * radius
+            var best: (Int, CGFloat)?
+
+            for vertex in parent.editableVertices where vertex.pageIndex == pageIndex {
+                let dx = CGFloat(vertex.point.x - point.x)
+                let dy = CGFloat(vertex.point.y - point.y)
+                let distSq = dx * dx + dy * dy
+                if distSq <= radiusSq {
+                    if best == nil || distSq < best!.1 {
+                        best = (vertex.index, distSq)
+                    }
+                }
+            }
+            return best?.0
         }
 
         func render(markers: [PDFMarker], areas: [PDFAreaOverlay], on pdfView: PDFView) {

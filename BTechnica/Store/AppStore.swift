@@ -685,6 +685,15 @@ final class AppStore: ObservableObject {
         persist()
     }
 
+    /// Replaces polygon vertices only. Name, color, visibility and issue links stay as stored.
+    func updateAreaVertices(id: UUID, vertices: [PDFPoint]) {
+        guard vertices.count >= 3,
+              let index = data.areas.firstIndex(where: { $0.id == id }) else { return }
+        data.areas[index].vertices = vertices
+        data.areas[index].updatedDate = Date()
+        persist()
+    }
+
     func deleteArea(_ area: Area) {
         data.areas.removeAll { $0.id == area.id }
         for index in data.issues.indices where data.issues[index].areaId == area.id {

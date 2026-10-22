@@ -23,6 +23,7 @@ import UIKit
 ///   2. Consecutive taps append polygon vertices (same page, PDF coordinates).
 ///   3. Finish (≥3 vertices) asks for name + color; Cancel discards the draft.
 ///   4. Areas render as translucent filled polygons with outlines (PDF annotations).
+///   5. Edit shape drags existing vertices; Save keeps name/color/issue links.
 struct DrawingDetailView: View {
     @EnvironmentObject private var store: AppStore
     let drawingId: UUID
@@ -32,6 +33,7 @@ struct DrawingDetailView: View {
         case calibrating(CalibStep)
         case placingIssue
         case drawingArea
+        case editingAreaShape
     }
 
     private enum CalibStep: Equatable {
@@ -55,6 +57,13 @@ struct DrawingDetailView: View {
     @State private var showAreaForm = false
     @State private var areaBeingEdited: Area?
     @State private var showDeleteAreaConfirm = false
+
+    /// In-progress geometry edit (copy of vertices; saved only on Confirm).
+    @State private var editingAreaId: UUID?
+    @State private var editingAreaPage: Int?
+    @State private var editingAreaVertices: [PDFPoint] = []
+    @State private var editingAreaColor: UIColor = .systemBlue
+    @State private var editingAreaOpacity: Double = Area.defaultOpacity
 
     /// Compact preview shown when an existing pin is tapped.
     @State private var previewIssueId: UUID?
@@ -123,9 +132,11 @@ struct DrawingDetailView: View {
                        captureEnabled: isCapturing,
                        markers: allMarkers,
                        areas: allAreaOverlays,
+                       editableVertices: editableVertices,
                        onTap: handleTap,
                        onMarkerTap: handleMarkerTap,
-                       onAreaTap: handleAreaTap)
+                       onAreaTap: handleAreaTap,
+                       onVertexDrag: handleVertexDrag)
                 .ignoresSafeArea(edges: .bottom)
 
             VStack(spacing: 10) {
@@ -144,6 +155,8 @@ struct DrawingDetailView: View {
                     AreaPreviewCard(area: area) {
                         areaBeingEdited = area
                         showAreaForm = true
+                    } onEditShape: {
+                        startEditingAreaShape(area)
                     } onDelete: {
                         showDeleteAreaConfirm = true
                     } onDismiss: {
@@ -275,6 +288,9 @@ struct DrawingDetailView: View {
                 Button("Finish") { finishDrawingArea() }
                     .disabled(!canFinishArea)
                 Button("Cancel", role: .cancel) { cancelActiveMode() }
+            case .editingAreaShape:
+                Button("Save") { saveAreaShapeEdit() }
+                Button("Cancel", role: .cancel) { cancelActiveMode() }
             case .placingIssue, .calibrating:
                 Button("Cancel", role: .cancel) { cancelActiveMode() }
             }
@@ -294,6 +310,8 @@ struct DrawingDetailView: View {
                     ? "Tap to add points · Finish when ready (\(draftAreaVertices.count))"
                     : "Tap consecutive points to draw the area (\(draftAreaVertices.count)/3)"
             )
+        case .editingAreaShape:
+            instructionBar("Drag vertices to reshape · Save or Cancel")
         case .calibrating(.tapA):
             instructionBar("Tap point A on the drawing")
         case .calibrating(.tapB):
@@ -347,6 +365,12 @@ struct DrawingDetailView: View {
             }
         }
 
+        if mode == .editingAreaShape, let page = editingAreaPage {
+            for vertex in editingAreaVertices {
+                result.append(PDFMarker(pageIndex: page, point: vertex, color: .systemBlue))
+            }
+        }
+
         if let a = pointA {
             result.append(PDFMarker(pageIndex: a.page, point: a.point, color: .systemBlue))
         }
@@ -356,11 +380,20 @@ struct DrawingDetailView: View {
         return result
     }
 
+    private var editableVertices: [PDFEditableVertex] {
+        guard mode == .editingAreaShape, let page = editingAreaPage else { return [] }
+        return editingAreaVertices.enumerated().map { index, point in
+            PDFEditableVertex(index: index, pageIndex: page, point: point)
+        }
+    }
+
     private var allAreaOverlays: [PDFAreaOverlay] {
         var result: [PDFAreaOverlay] = []
 
         if showAreaOverlays {
             for area in drawingAreas where area.isVisible {
+                // While reshaping, show the live draft instead of the stored polygon.
+                if mode == .editingAreaShape, area.id == editingAreaId { continue }
                 result.append(PDFAreaOverlay(
                     id: area.id,
                     pageIndex: area.pageIndex,
@@ -387,6 +420,20 @@ struct DrawingDetailView: View {
             ))
         }
 
+        if mode == .editingAreaShape,
+           let page = editingAreaPage,
+           editingAreaVertices.count >= 3 {
+            result.append(PDFAreaOverlay(
+                id: editingAreaId,
+                pageIndex: page,
+                vertices: editingAreaVertices,
+                color: editingAreaColor,
+                opacity: CGFloat(editingAreaOpacity),
+                isSelected: true,
+                isDraft: false
+            ))
+        }
+
         return result
     }
 
@@ -397,6 +444,7 @@ struct DrawingDetailView: View {
         previewAreaId = nil
         resetCalibrationPoints()
         clearAreaDraft()
+        clearShapeEdit()
         pendingPlacement = nil
         mode = .placingIssue
     }
@@ -407,6 +455,7 @@ struct DrawingDetailView: View {
         pendingPlacement = nil
         resetCalibrationPoints()
         clearAreaDraft()
+        clearShapeEdit()
         mode = .drawingArea
     }
 
@@ -415,6 +464,7 @@ struct DrawingDetailView: View {
         previewAreaId = nil
         pendingPlacement = nil
         clearAreaDraft()
+        clearShapeEdit()
         pointA = nil
         pointB = nil
         mode = .calibrating(.tapA)
@@ -430,6 +480,11 @@ struct DrawingDetailView: View {
             clearAreaDraft()
             showAreaForm = false
             mode = .idle
+        case .editingAreaShape:
+            let restoredId = editingAreaId
+            clearShapeEdit()
+            mode = .idle
+            previewAreaId = restoredId
         case .calibrating:
             resetCalibration()
         case .idle:
@@ -443,9 +498,47 @@ struct DrawingDetailView: View {
         showAreaForm = true
     }
 
+    private func startEditingAreaShape(_ area: Area) {
+        guard area.vertices.count >= 3 else { return }
+        previewIssueId = nil
+        pendingPlacement = nil
+        resetCalibrationPoints()
+        clearAreaDraft()
+        editingAreaId = area.id
+        editingAreaPage = area.pageIndex
+        editingAreaVertices = area.vertices
+        editingAreaColor = area.uiColor
+        editingAreaOpacity = area.opacity
+        previewAreaId = area.id
+        mode = .editingAreaShape
+    }
+
+    private func saveAreaShapeEdit() {
+        guard let id = editingAreaId, editingAreaVertices.count >= 3 else {
+            cancelActiveMode()
+            return
+        }
+        store.updateAreaVertices(id: id, vertices: editingAreaVertices)
+        clearShapeEdit()
+        mode = .idle
+        previewAreaId = id
+    }
+
     private func clearAreaDraft() {
         draftAreaPage = nil
         draftAreaVertices = []
+    }
+
+    private func clearShapeEdit() {
+        editingAreaId = nil
+        editingAreaPage = nil
+        editingAreaVertices = []
+    }
+
+    private func handleVertexDrag(index: Int, point: PDFPoint) {
+        guard mode == .editingAreaShape,
+              editingAreaVertices.indices.contains(index) else { return }
+        editingAreaVertices[index] = point
     }
 
     private func resetCalibration() {
@@ -617,10 +710,11 @@ private struct IssuePreviewCard: View {
     }
 }
 
-/// Compact card for a selected polygon area (rename / delete).
+/// Compact card for a selected polygon area (rename / reshape / delete).
 private struct AreaPreviewCard: View {
     let area: Area
     var onRename: () -> Void
+    var onEditShape: () -> Void
     var onDelete: () -> Void
     var onDismiss: () -> Void
 
@@ -644,6 +738,8 @@ private struct AreaPreviewCard: View {
 
                 HStack(spacing: 16) {
                     Button("Rename", action: onRename)
+                        .font(.caption.weight(.semibold))
+                    Button("Edit shape", action: onEditShape)
                         .font(.caption.weight(.semibold))
                     Button("Delete", role: .destructive, action: onDelete)
                         .font(.caption.weight(.semibold))

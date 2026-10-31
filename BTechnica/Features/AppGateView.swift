@@ -25,6 +25,9 @@ struct AppGateView: View {
         }
         .onChange(of: auth.userId) { _, userId in
             projects.bind(userId: userId)
+            if let userId {
+                LocalPersistenceBootstrap.prepareIfNeeded(userId: userId)
+            }
             syncWorkspace()
         }
         .onChange(of: projects.selectedProjectId) { _, _ in
@@ -38,6 +41,9 @@ struct AppGateView: View {
         }
         .onAppear {
             projects.bind(userId: auth.userId)
+            if let userId = auth.userId {
+                LocalPersistenceBootstrap.prepareIfNeeded(userId: userId)
+            }
             syncWorkspace()
         }
         .task(id: auth.userId) {
@@ -45,6 +51,9 @@ struct AppGateView: View {
             // Cloud project workspaces must not adopt legacy Documents data.
             _ = auth.consumeLegacyAdoptionIntent()
             projects.bind(userId: auth.userId)
+            if let userId = auth.userId {
+                LocalPersistenceBootstrap.prepareIfNeeded(userId: userId)
+            }
             await projects.load(reopenWorkspace: true)
             syncWorkspace()
         }

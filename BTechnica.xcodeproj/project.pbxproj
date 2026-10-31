@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5485E182308AA1650038CA29 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000040 /* GRDB */; };
 		A00000000000000000000013 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000011 /* Supabase */; };
 /* End PBXBuildFile section */
 
@@ -45,6 +46,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5485E182308AA1650038CA29 /* GRDB in Frameworks */,
 				A00000000000000000000013 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -108,6 +110,7 @@
 			name = BTechnica;
 			packageProductDependencies = (
 				A00000000000000000000011 /* Supabase */,
+				A00000000000000000000040 /* GRDB */,
 			);
 			productName = BTechnica;
 			productReference = A00000000000000000000004 /* BTechnica.app */;
@@ -164,6 +167,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				A00000000000000000000010 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				A00000000000000000000041 /* XCLocalSwiftPackageReference "Vendor/GRDB.swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A00000000000000000000003 /* Products */;
@@ -468,6 +472,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		A00000000000000000000041 /* XCLocalSwiftPackageReference "Vendor/GRDB.swift" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Vendor/GRDB.swift;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		A00000000000000000000010 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -484,6 +495,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A00000000000000000000010 /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
+		};
+		A00000000000000000000040 /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A00000000000000000000041 /* XCLocalSwiftPackageReference "Vendor/GRDB.swift" */;
+			productName = GRDB;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -7,7 +7,8 @@ import UIKit
 ///
 /// Responsibilities:
 ///  - own in-memory `AppData` and publish changes to SwiftUI,
-///  - persist project drawings/issues under `Users/<userId>/Projects/<projectId>/`,
+///  - persist drawing folders + drawing metadata in SQLite (authoritative after import),
+///  - persist project issues/areas under `Users/<userId>/Projects/<projectId>/appdata.json`,
 ///  - persist user-global contractors/equipment/disciplines under `Users/<userId>/userdata.json`,
 ///  - manage on-disk PDF and issue photo files for this project only.
 ///
@@ -28,6 +29,10 @@ final class AppStore: ObservableObject {
     private let fileManager = FileManager.default
     /// When true, the on-disk project `appdata.json` is corrupt/untrusted — do not promote it to last-good.
     private var storeFileUntrusted = false
+    /// Per-user SQLite database; folders/drawings read and write here when non-nil.
+    private var database: AppDatabase?
+    /// When true, JSON `drawingFolders` / `drawings` are recovery-only (not rewritten from memory).
+    private var drawingsUseSQLite = false
 
     /// Documents/Users/<userId>/Projects/<projectId>/appdata.json
     private var storeURL: URL {
@@ -142,10 +147,30 @@ final class AppStore: ObservableObject {
             }
         }
 
+        // Folders + drawings: SQLite is authoritative after (or instead of) JSON import.
+        // Never replace migrated SQLite rows with stale JSON folder/drawing snapshots.
+        var sqliteFolders = projectLocal.drawingFolders
+        var sqliteDrawings = projectLocal.drawings
+        var openedDatabase: AppDatabase?
+        var useSQLiteDrawings = false
+        do {
+            let db = try LocalPersistenceBootstrap.prepareSynchronously(userId: userId)
+            try db.ensureProject(projectLocal.project)
+            sqliteFolders = try db.fetchDrawingFolders(projectId: projectId)
+            sqliteDrawings = try db.fetchDrawings(projectId: projectId)
+            openedDatabase = db
+            useSQLiteDrawings = true
+        } catch {
+            print("[AppStore] SQLite drawing store unavailable: \(error)")
+            if loadError == nil {
+                loadError = "Local data could not be loaded"
+            }
+        }
+
         var loadedData = AppData(
             project: projectLocal.project,
-            drawingFolders: projectLocal.drawingFolders,
-            drawings: projectLocal.drawings,
+            drawingFolders: sqliteFolders,
+            drawings: sqliteDrawings,
             issues: projectLocal.issues,
             areas: projectLocal.areas,
             equipment: shared.equipment,
@@ -160,6 +185,8 @@ final class AppStore: ObservableObject {
         self.data = loadedData
         self.storageError = loadError
         self.storeFileUntrusted = untrusted
+        self.database = openedDatabase
+        self.drawingsUseSQLite = useSQLiteDrawings
 
         if needsRewrite {
             // Write back schema / identity fixes so the next launch is clean.
@@ -1042,11 +1069,28 @@ final class AppStore: ObservableObject {
         persist(clearingLoadError: true)
     }
 
-    /// Writes project-local and user-shared files atomically.
+    /// Writes SQLite drawing metadata (when enabled) plus project-local / user-shared JSON.
+    /// Folder/drawing entities are never dual-written: SQLite is sole writer; JSON keeps a
+    /// frozen recovery snapshot of those arrays from disk.
     private func persist(clearingLoadError: Bool) {
         do {
             try fileManager.createDirectory(at: projectRootURL, withIntermediateDirectories: true)
             try fileManager.createDirectory(at: userRootURL, withIntermediateDirectories: true)
+
+            if drawingsUseSQLite {
+                guard let database else {
+                    throw NSError(
+                        domain: "AppStore",
+                        code: 1,
+                        userInfo: [NSLocalizedDescriptionKey: "SQLite drawing store is not open"]
+                    )
+                }
+                try database.replaceFoldersAndDrawings(
+                    project: data.project,
+                    folders: data.drawingFolders,
+                    drawings: data.drawings
+                )
+            }
 
             if !storeFileUntrusted, fileManager.fileExists(atPath: storeURL.path) {
                 try? fileManager.removeItem(at: lastGoodURL)
@@ -1057,10 +1101,23 @@ final class AppStore: ObservableObject {
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             encoder.dateEncodingStrategy = .iso8601
 
+            // Issues/areas/project still live in JSON. Folders/drawings in JSON are
+            // recovery-only once SQLite is authoritative — do not overwrite with live edits.
+            let jsonFolders: [DrawingFolder]
+            let jsonDrawings: [Drawing]
+            if drawingsUseSQLite {
+                let frozen = Self.frozenDrawingSnapshot(from: storeURL)
+                jsonFolders = frozen.folders
+                jsonDrawings = frozen.drawings
+            } else {
+                jsonFolders = data.drawingFolders
+                jsonDrawings = data.drawings
+            }
+
             let projectLocal = ProjectLocalData(
                 project: data.project,
-                drawingFolders: data.drawingFolders,
-                drawings: data.drawings,
+                drawingFolders: jsonFolders,
+                drawings: jsonDrawings,
                 issues: data.issues,
                 areas: data.areas,
                 schemaVersion: data.schemaVersion
@@ -1084,6 +1141,16 @@ final class AppStore: ObservableObject {
         } catch {
             print("[AppStore] Failed to persist data: \(error)")
             storageError = "Local data could not be saved"
+        }
+    }
+
+    /// Reads folder/drawing arrays currently on disk for JSON recovery preservation.
+    private static func frozenDrawingSnapshot(from url: URL) -> (folders: [DrawingFolder], drawings: [Drawing]) {
+        switch loadProjectResult(from: url) {
+        case .loaded(let local):
+            return (local.drawingFolders, local.drawings)
+        case .missing, .corrupt:
+            return ([], [])
         }
     }
 

@@ -44,6 +44,29 @@ struct PageCalibration: Codable, Equatable, Identifiable {
         self.mmPerPDFUnit = pdfDistance > 0 ? (self.realDistanceMM / pdfDistance) : 0
     }
 
+    /// Reconstructs a calibration from persisted storage (preserves UUID and computed fields).
+    init(
+        id: UUID,
+        pageIndex: Int,
+        pointA: PDFPoint,
+        pointB: PDFPoint,
+        realDistanceMM: Double,
+        enteredUnit: LengthUnit,
+        enteredValue: Double,
+        mmPerPDFUnit: Double,
+        calibratedDate: Date
+    ) {
+        self.id = id
+        self.pageIndex = pageIndex
+        self.pointA = pointA
+        self.pointB = pointB
+        self.realDistanceMM = realDistanceMM
+        self.enteredUnit = enteredUnit
+        self.enteredValue = enteredValue
+        self.mmPerPDFUnit = mmPerPDFUnit
+        self.calibratedDate = calibratedDate
+    }
+
     /// Distance between the two tapped points measured in PDF units.
     var pdfDistance: Double {
         let dx = pointB.x - pointA.x

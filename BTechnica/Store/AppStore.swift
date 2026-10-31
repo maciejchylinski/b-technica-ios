@@ -9,7 +9,8 @@ import UIKit
 ///  - own in-memory `AppData` and publish changes to SwiftUI,
 ///  - persist drawing folders, drawings, issues, areas, and issue photo metadata in SQLite
 ///    (authoritative after import),
-///  - persist user-global contractors/equipment/disciplines under `Users/<userId>/userdata.json`,
+///  - persist user-global contractors/equipment/disciplines in SQLite (authoritative after import);
+///    `Users/<userId>/userdata.json` stays a frozen recovery snapshot,
 ///  - manage on-disk PDF and issue photo files for this project only.
 ///
 /// Cloud project rows live in Supabase; this store is local-only (not synced yet).
@@ -35,6 +36,8 @@ final class AppStore: ObservableObject {
     private var drawingsUseSQLite = false
     /// When true, JSON `issues` / `areas` (incl. embedded photos) are recovery-only.
     private var issuesAreasUseSQLite = false
+    /// When true, JSON contractors / equipment / disciplines are recovery-only.
+    private var userSharedUseSQLite = false
 
     /// Documents/Users/<userId>/Projects/<projectId>/appdata.json
     private var storeURL: URL {
@@ -149,15 +152,19 @@ final class AppStore: ObservableObject {
             }
         }
 
-        // Project content: SQLite is authoritative after (or instead of) JSON import.
+        // Project + user-global content: SQLite is authoritative after (or instead of) JSON import.
         // Never replace migrated SQLite rows with stale JSON snapshots.
         var sqliteFolders = projectLocal.drawingFolders
         var sqliteDrawings = projectLocal.drawings
         var sqliteIssues = projectLocal.issues
         var sqliteAreas = projectLocal.areas
+        var sqliteContractors = shared.contractors
+        var sqliteEquipment = shared.equipment
+        var sqliteDisciplines = shared.disciplines
         var openedDatabase: AppDatabase?
         var useSQLiteDrawings = false
         var useSQLiteIssuesAreas = false
+        var useSQLiteUserShared = false
         do {
             let db = try LocalPersistenceBootstrap.prepareSynchronously(userId: userId)
             try db.ensureProject(projectLocal.project)
@@ -165,9 +172,13 @@ final class AppStore: ObservableObject {
             sqliteDrawings = try db.fetchDrawings(projectId: projectId)
             sqliteAreas = try db.fetchAreas(projectId: projectId)
             sqliteIssues = try db.fetchIssues(projectId: projectId)
+            sqliteContractors = try db.fetchContractors()
+            sqliteDisciplines = try db.fetchDisciplines()
+            sqliteEquipment = try db.fetchEquipment()
             openedDatabase = db
             useSQLiteDrawings = true
             useSQLiteIssuesAreas = true
+            useSQLiteUserShared = true
         } catch {
             print("[AppStore] SQLite project store unavailable: \(error)")
             if loadError == nil {
@@ -181,9 +192,9 @@ final class AppStore: ObservableObject {
             drawings: sqliteDrawings,
             issues: sqliteIssues,
             areas: sqliteAreas,
-            equipment: shared.equipment,
-            contractors: shared.contractors,
-            disciplines: shared.disciplines,
+            equipment: sqliteEquipment,
+            contractors: sqliteContractors,
+            disciplines: sqliteDisciplines,
             schemaVersion: max(projectLocal.schemaVersion, shared.schemaVersion)
         )
         let (normalized, didNormalize) = Self.normalizedIssueNumbers(loadedData)
@@ -196,6 +207,7 @@ final class AppStore: ObservableObject {
         self.database = openedDatabase
         self.drawingsUseSQLite = useSQLiteDrawings
         self.issuesAreasUseSQLite = useSQLiteIssuesAreas
+        self.userSharedUseSQLite = useSQLiteUserShared
 
         if needsRewrite {
             // Write back schema / identity fixes so the next launch is clean.
@@ -1078,7 +1090,7 @@ final class AppStore: ObservableObject {
         persist(clearingLoadError: true)
     }
 
-    /// Writes SQLite project content (when enabled) plus residual JSON / user-shared JSON.
+    /// Writes SQLite project + user-shared content (when enabled) plus residual JSON.
     /// Migrated entities are never dual-written: SQLite is sole writer; JSON keeps a
     /// frozen recovery snapshot of those arrays from disk.
     private func persist(clearingLoadError: Bool) {
@@ -1086,7 +1098,7 @@ final class AppStore: ObservableObject {
             try fileManager.createDirectory(at: projectRootURL, withIntermediateDirectories: true)
             try fileManager.createDirectory(at: userRootURL, withIntermediateDirectories: true)
 
-            if drawingsUseSQLite || issuesAreasUseSQLite {
+            if drawingsUseSQLite || issuesAreasUseSQLite || userSharedUseSQLite {
                 guard let database else {
                     throw NSError(
                         domain: "AppStore",
@@ -1116,6 +1128,14 @@ final class AppStore: ObservableObject {
                         issues: data.issues
                     )
                 }
+
+                if userSharedUseSQLite {
+                    try database.persistUserShared(
+                        contractors: data.contractors,
+                        disciplines: data.disciplines,
+                        equipment: data.equipment
+                    )
+                }
             }
 
             if !storeFileUntrusted, fileManager.fileExists(atPath: storeURL.path) {
@@ -1134,6 +1154,11 @@ final class AppStore: ObservableObject {
             let jsonIssues = issuesAreasUseSQLite ? frozen.issues : data.issues
             let jsonAreas = issuesAreasUseSQLite ? frozen.areas : data.areas
 
+            let frozenShared = Self.frozenUserSharedSnapshot(from: userSharedURL)
+            let jsonContractors = userSharedUseSQLite ? frozenShared.contractors : data.contractors
+            let jsonEquipment = userSharedUseSQLite ? frozenShared.equipment : data.equipment
+            let jsonDisciplines = userSharedUseSQLite ? frozenShared.disciplines : data.disciplines
+
             let projectLocal = ProjectLocalData(
                 project: data.project,
                 drawingFolders: jsonFolders,
@@ -1143,9 +1168,9 @@ final class AppStore: ObservableObject {
                 schemaVersion: data.schemaVersion
             )
             let shared = UserSharedData(
-                contractors: data.contractors,
-                equipment: data.equipment,
-                disciplines: data.disciplines,
+                contractors: jsonContractors,
+                equipment: jsonEquipment,
+                disciplines: jsonDisciplines,
                 schemaVersion: data.schemaVersion
             )
 
@@ -1176,6 +1201,20 @@ final class AppStore: ObservableObject {
             return (local.drawingFolders, local.drawings, local.issues, local.areas)
         case .missing, .corrupt:
             return ([], [], [], [])
+        }
+    }
+
+    /// Reads user-shared arrays currently on disk for JSON recovery preservation.
+    private static func frozenUserSharedSnapshot(from url: URL) -> (
+        contractors: [Contractor],
+        equipment: [EquipmentItem],
+        disciplines: [Discipline]
+    ) {
+        switch loadUserSharedResult(from: url) {
+        case .loaded(let shared):
+            return (shared.contractors, shared.equipment, shared.disciplines)
+        case .missing, .corrupt:
+            return ([], [], [])
         }
     }
 

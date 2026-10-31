@@ -7,19 +7,7 @@ extension AppDatabase {
     /// Ensures the local `projects` row exists (FK parent for folders/drawings).
     func ensureProject(_ project: Project) throws {
         try dbQueue.write { db in
-            try db.execute(
-                sql: """
-                INSERT INTO projects (id, name, created_at)
-                VALUES (?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
-                  name = excluded.name
-                """,
-                arguments: [
-                    project.id.uuidString,
-                    project.name,
-                    SQLiteDateCoding.string(from: project.createdDate)
-                ]
-            )
+            try Self.upsertProject(project, db: db)
         }
     }
 
@@ -64,140 +52,246 @@ extension AppDatabase {
         }
     }
 
-    /// Replaces the project's folder + drawing tree in one transaction.
-    /// Preserves drawing UUIDs and relative `file_name` values; does not touch PDF files.
+    /// Upserts folders/drawings/calibrations. Orphan drawing deletion is skipped when
+    /// related issues/areas still exist (avoids CASCADE wiping them). Prefer
+    /// `persistProjectWorkspace` for full project graphs.
     func replaceFoldersAndDrawings(
         project: Project,
         folders: [DrawingFolder],
         drawings: [Drawing]
     ) throws {
         try dbQueue.write { db in
+            try Self.upsertProject(project, db: db)
+            try Self.upsertFolders(folders, db: db)
+            try Self.upsertDrawingsAndCalibrations(drawings, db: db)
+            try Self.deleteOrphanFolders(
+                projectId: project.id,
+                keepIds: Set(folders.map(\.id.uuidString)),
+                db: db
+            )
+            try Self.deleteOrphanDrawings(
+                projectId: project.id,
+                keepIds: Set(drawings.map(\.id.uuidString)),
+                requireNoDependents: true,
+                db: db
+            )
+        }
+    }
+
+    /// Atomically persists folders, drawings, areas, issues, and photo metadata.
+    /// Editing drawing metadata never cascades away related issues/areas/photos.
+    /// Explicit removals from the in-memory keep-sets are deleted in dependency order.
+    func persistProjectWorkspace(
+        project: Project,
+        folders: [DrawingFolder],
+        drawings: [Drawing],
+        areas: [Area],
+        issues: [Issue]
+    ) throws {
+        try dbQueue.write { db in
+            try Self.upsertProject(project, db: db)
+            try Self.upsertFolders(folders, db: db)
+            try Self.upsertDrawingsAndCalibrations(drawings, db: db)
+            try Self.upsertAreas(areas, db: db)
+            try Self.upsertIssuesAndPhotos(issues, projectId: project.id, db: db)
+
+            // Controlled deletions — dependents before parents (no surprise CASCADE loss).
+            try Self.deleteOrphanIssues(
+                projectId: project.id,
+                keepIds: Set(issues.map(\.id.uuidString)),
+                db: db
+            )
+            try Self.deleteOrphanAreas(
+                projectId: project.id,
+                keepIds: Set(areas.map(\.id.uuidString)),
+                db: db
+            )
+            try Self.deleteOrphanDrawings(
+                projectId: project.id,
+                keepIds: Set(drawings.map(\.id.uuidString)),
+                requireNoDependents: false,
+                db: db
+            )
+            try Self.deleteOrphanFolders(
+                projectId: project.id,
+                keepIds: Set(folders.map(\.id.uuidString)),
+                db: db
+            )
+        }
+    }
+
+    // MARK: - Shared writers
+
+    static func upsertProject(_ project: Project, db: Database) throws {
+        try db.execute(
+            sql: """
+            INSERT INTO projects (id, name, created_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              name = excluded.name
+            """,
+            arguments: [
+                project.id.uuidString,
+                project.name,
+                SQLiteDateCoding.string(from: project.createdDate)
+            ]
+        )
+    }
+
+    static func upsertFolders(_ folders: [DrawingFolder], db: Database) throws {
+        for folder in folders {
             try db.execute(
                 sql: """
-                INSERT INTO projects (id, name, created_at)
-                VALUES (?, ?, ?)
+                INSERT INTO drawing_folders
+                  (id, project_id, parent_folder_id, name, sort_order, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
-                  name = excluded.name
+                  project_id = excluded.project_id,
+                  parent_folder_id = excluded.parent_folder_id,
+                  name = excluded.name,
+                  sort_order = excluded.sort_order,
+                  created_at = excluded.created_at
                 """,
                 arguments: [
-                    project.id.uuidString,
-                    project.name,
-                    SQLiteDateCoding.string(from: project.createdDate)
+                    folder.id.uuidString,
+                    folder.projectId.uuidString,
+                    folder.parentFolderId?.uuidString,
+                    folder.name,
+                    folder.sortOrder,
+                    SQLiteDateCoding.string(from: folder.createdDate)
+                ]
+            )
+        }
+    }
+
+    static func upsertDrawingsAndCalibrations(_ drawings: [Drawing], db: Database) throws {
+        for drawing in drawings {
+            try db.execute(
+                sql: """
+                INSERT INTO drawings
+                  (id, project_id, folder_id, name, file_name, page_count, created_at,
+                   revision, discipline, location, drawing_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                  project_id = excluded.project_id,
+                  folder_id = excluded.folder_id,
+                  name = excluded.name,
+                  file_name = excluded.file_name,
+                  page_count = excluded.page_count,
+                  created_at = excluded.created_at,
+                  revision = excluded.revision,
+                  discipline = excluded.discipline,
+                  location = excluded.location,
+                  drawing_date = excluded.drawing_date
+                """,
+                arguments: [
+                    drawing.id.uuidString,
+                    drawing.projectId.uuidString,
+                    drawing.folderId?.uuidString,
+                    drawing.name,
+                    drawing.fileName,
+                    drawing.pageCount,
+                    SQLiteDateCoding.string(from: drawing.createdDate),
+                    drawing.revision,
+                    drawing.discipline,
+                    drawing.location,
+                    drawing.drawingDate.map(SQLiteDateCoding.string(from:))
                 ]
             )
 
-            let projectKey = project.id.uuidString
-            let keepFolderIds = Set(folders.map { $0.id.uuidString })
-            let keepDrawingIds = Set(drawings.map { $0.id.uuidString })
-
-            for folder in folders {
+            let keepCalIds = Set(drawing.calibrations.map(\.id.uuidString))
+            for cal in drawing.calibrations {
                 try db.execute(
                     sql: """
-                    INSERT INTO drawing_folders
-                      (id, project_id, parent_folder_id, name, sort_order, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO page_calibrations
+                      (id, drawing_id, page_index,
+                       point_a_x, point_a_y, point_b_x, point_b_y,
+                       real_distance_mm, entered_unit, entered_value,
+                       mm_per_pdf_unit, calibrated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(id) DO UPDATE SET
-                      project_id = excluded.project_id,
-                      parent_folder_id = excluded.parent_folder_id,
-                      name = excluded.name,
-                      sort_order = excluded.sort_order,
-                      created_at = excluded.created_at
+                      drawing_id = excluded.drawing_id,
+                      page_index = excluded.page_index,
+                      point_a_x = excluded.point_a_x,
+                      point_a_y = excluded.point_a_y,
+                      point_b_x = excluded.point_b_x,
+                      point_b_y = excluded.point_b_y,
+                      real_distance_mm = excluded.real_distance_mm,
+                      entered_unit = excluded.entered_unit,
+                      entered_value = excluded.entered_value,
+                      mm_per_pdf_unit = excluded.mm_per_pdf_unit,
+                      calibrated_at = excluded.calibrated_at
                     """,
                     arguments: [
-                        folder.id.uuidString,
-                        folder.projectId.uuidString,
-                        folder.parentFolderId?.uuidString,
-                        folder.name,
-                        folder.sortOrder,
-                        SQLiteDateCoding.string(from: folder.createdDate)
+                        cal.id.uuidString,
+                        drawing.id.uuidString,
+                        cal.pageIndex,
+                        cal.pointA.x,
+                        cal.pointA.y,
+                        cal.pointB.x,
+                        cal.pointB.y,
+                        cal.realDistanceMM,
+                        cal.enteredUnit.rawValue,
+                        cal.enteredValue,
+                        cal.mmPerPDFUnit,
+                        SQLiteDateCoding.string(from: cal.calibratedDate)
                     ]
                 )
             }
 
-            for drawing in drawings {
-                try db.execute(
-                    sql: """
-                    INSERT INTO drawings
-                      (id, project_id, folder_id, name, file_name, page_count, created_at,
-                       revision, discipline, location, drawing_date)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(id) DO UPDATE SET
-                      project_id = excluded.project_id,
-                      folder_id = excluded.folder_id,
-                      name = excluded.name,
-                      file_name = excluded.file_name,
-                      page_count = excluded.page_count,
-                      created_at = excluded.created_at,
-                      revision = excluded.revision,
-                      discipline = excluded.discipline,
-                      location = excluded.location,
-                      drawing_date = excluded.drawing_date
-                    """,
-                    arguments: [
-                        drawing.id.uuidString,
-                        drawing.projectId.uuidString,
-                        drawing.folderId?.uuidString,
-                        drawing.name,
-                        drawing.fileName,
-                        drawing.pageCount,
-                        SQLiteDateCoding.string(from: drawing.createdDate),
-                        drawing.revision,
-                        drawing.discipline,
-                        drawing.location,
-                        drawing.drawingDate.map(SQLiteDateCoding.string(from:))
-                    ]
-                )
+            let existingCalIds = try String.fetchAll(
+                db,
+                sql: "SELECT id FROM page_calibrations WHERE drawing_id = ?",
+                arguments: [drawing.id.uuidString]
+            )
+            for id in existingCalIds where !keepCalIds.contains(id) {
+                try db.execute(sql: "DELETE FROM page_calibrations WHERE id = ?", arguments: [id])
+            }
+        }
+    }
 
-                try db.execute(
-                    sql: "DELETE FROM page_calibrations WHERE drawing_id = ?",
-                    arguments: [drawing.id.uuidString]
-                )
-                for cal in drawing.calibrations {
-                    try db.execute(
-                        sql: """
-                        INSERT INTO page_calibrations
-                          (id, drawing_id, page_index,
-                           point_a_x, point_a_y, point_b_x, point_b_y,
-                           real_distance_mm, entered_unit, entered_value,
-                           mm_per_pdf_unit, calibrated_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        arguments: [
-                            cal.id.uuidString,
-                            drawing.id.uuidString,
-                            cal.pageIndex,
-                            cal.pointA.x,
-                            cal.pointA.y,
-                            cal.pointB.x,
-                            cal.pointB.y,
-                            cal.realDistanceMM,
-                            cal.enteredUnit.rawValue,
-                            cal.enteredValue,
-                            cal.mmPerPDFUnit,
-                            SQLiteDateCoding.string(from: cal.calibratedDate)
-                        ]
-                    )
+    static func deleteOrphanFolders(projectId: UUID, keepIds: Set<String>, db: Database) throws {
+        let existing = try String.fetchAll(
+            db,
+            sql: "SELECT id FROM drawing_folders WHERE project_id = ?",
+            arguments: [projectId.uuidString]
+        )
+        for id in existing where !keepIds.contains(id) {
+            try db.execute(sql: "DELETE FROM drawing_folders WHERE id = ?", arguments: [id])
+        }
+    }
+
+    /// - Parameter requireNoDependents: when true, skip deleting drawings that still have
+    ///   issues/areas (drawing-only persist path). When false, caller must have already
+    ///   removed dependents.
+    static func deleteOrphanDrawings(
+        projectId: UUID,
+        keepIds: Set<String>,
+        requireNoDependents: Bool,
+        db: Database
+    ) throws {
+        let existing = try String.fetchAll(
+            db,
+            sql: "SELECT id FROM drawings WHERE project_id = ?",
+            arguments: [projectId.uuidString]
+        )
+        for id in existing where !keepIds.contains(id) {
+            if requireNoDependents {
+                let issueCount = try Int.fetchOne(
+                    db,
+                    sql: "SELECT COUNT(*) FROM issues WHERE drawing_id = ?",
+                    arguments: [id]
+                ) ?? 0
+                let areaCount = try Int.fetchOne(
+                    db,
+                    sql: "SELECT COUNT(*) FROM areas WHERE drawing_id = ?",
+                    arguments: [id]
+                ) ?? 0
+                if issueCount > 0 || areaCount > 0 {
+                    continue
                 }
             }
-
-            // Remove drawings no longer present (calibrations cascade).
-            let existingDrawingIds = try String.fetchAll(
-                db,
-                sql: "SELECT id FROM drawings WHERE project_id = ?",
-                arguments: [projectKey]
-            )
-            for id in existingDrawingIds where !keepDrawingIds.contains(id) {
-                try db.execute(sql: "DELETE FROM drawings WHERE id = ?", arguments: [id])
-            }
-
-            let existingFolderIds = try String.fetchAll(
-                db,
-                sql: "SELECT id FROM drawing_folders WHERE project_id = ?",
-                arguments: [projectKey]
-            )
-            for id in existingFolderIds where !keepFolderIds.contains(id) {
-                try db.execute(sql: "DELETE FROM drawing_folders WHERE id = ?", arguments: [id])
-            }
+            try db.execute(sql: "DELETE FROM drawings WHERE id = ?", arguments: [id])
         }
     }
 

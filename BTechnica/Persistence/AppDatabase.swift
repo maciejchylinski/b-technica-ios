@@ -4,8 +4,9 @@ import GRDB
 /// Local SQLite database (GRDB) for one signed-in user.
 ///
 /// Path: `Documents/Users/<userId>/btechnica.sqlite`
-/// Drawing folders and drawing metadata are authoritative here after import.
-/// JSON remains a read-only recovery source for those entities; PDF/photo files stay on disk.
+/// Drawing folders, drawings, issues, areas, and issue photo metadata are authoritative
+/// here after import. JSON remains a read-only recovery source for those entities;
+/// PDF/photo files stay on disk.
 final class AppDatabase: @unchecked Sendable {
     let userId: UUID
     let dbQueue: DatabaseQueue

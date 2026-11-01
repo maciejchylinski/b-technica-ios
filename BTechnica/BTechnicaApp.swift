@@ -184,6 +184,38 @@ struct BTechnicaApp: App {
                 fputs("BT_LIVE_DRAWING_METADATA_SYNC_VERIFY passed=\(result.passed) msg=\(result.message)\n", stderr)
             }
         }
+        if ProcessInfo.processInfo.arguments.contains("-BTVerifyLiveDrawingMetadataPull") {
+            let result = LiveDrawingMetadataPullVerification.run()
+            let payload: [String: Any] = [
+                "passed": result.passed,
+                "message": result.message
+            ]
+            if let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]),
+               let text = String(data: data, encoding: .utf8) {
+                let url = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("bt-live-drawing-metadata-pull-verify.json")
+                try? text.write(to: url, atomically: true, encoding: .utf8)
+                fputs("BT_LIVE_DRAWING_METADATA_PULL_VERIFY \(text)\n", stderr)
+            } else {
+                fputs("BT_LIVE_DRAWING_METADATA_PULL_VERIFY passed=\(result.passed) msg=\(result.message)\n", stderr)
+            }
+        }
+        if ProcessInfo.processInfo.arguments.contains("-BTVerifyLiveDrawingPDFDownload") {
+            let result = LiveDrawingPDFDownloadVerification.run()
+            let payload: [String: Any] = [
+                "passed": result.passed,
+                "message": result.message
+            ]
+            if let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]),
+               let text = String(data: data, encoding: .utf8) {
+                let url = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("bt-live-drawing-pdf-download-verify.json")
+                try? text.write(to: url, atomically: true, encoding: .utf8)
+                fputs("BT_LIVE_DRAWING_PDF_DOWNLOAD_VERIFY \(text)\n", stderr)
+            } else {
+                fputs("BT_LIVE_DRAWING_PDF_DOWNLOAD_VERIFY passed=\(result.passed) msg=\(result.message)\n", stderr)
+            }
+        }
         #endif
     }
 

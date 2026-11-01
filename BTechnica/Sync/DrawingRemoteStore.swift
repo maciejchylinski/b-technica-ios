@@ -24,10 +24,50 @@ enum DrawingRemoteCreateResult: Equatable {
     case alreadyPresent
 }
 
-/// Remote API for pushing local drawing metadata (no download).
+/// Remote drawing row for project pulls (includes soft-delete tombstones).
+struct RemoteDrawing: Equatable, Sendable {
+    var id: UUID
+    var projectId: UUID
+    var folderId: UUID?
+    var name: String
+    var discipline: String?
+    var location: String?
+    var createdAt: Date
+    var deletedAt: Date?
+    /// Current revision + pages when active; nil for incomplete or tombstone rows.
+    var currentRevision: RemoteDrawingRevision?
+
+    var isTombstone: Bool { deletedAt != nil }
+}
+
+/// Current revision snapshot pulled with a remote drawing.
+struct RemoteDrawingRevision: Equatable, Sendable {
+    var id: UUID
+    var drawingId: UUID
+    var revisionLabel: String?
+    var storagePath: String
+    var originalFileName: String?
+    var pageCount: Int
+    var drawingDate: Date?
+    var isCurrent: Bool
+    var pages: [RemoteDrawingPage]
+}
+
+/// Page row pulled with a remote revision (metadata only; no PDF bytes).
+struct RemoteDrawingPage: Equatable, Sendable {
+    var id: UUID
+    var revisionId: UUID
+    var pageIndex: Int
+}
+
+/// Remote API for pushing local drawing metadata and pulling project drawings.
 protocol DrawingRemoteStore: Sendable {
     /// Ensures drawing + current revision + pages exist. Never overwrites conflicting rows.
     func ensureCreated(_ payload: DrawingMetadataPayload) async throws -> DrawingRemoteCreateResult
+
+    /// Lists drawings for a project visible to the caller, including tombstones.
+    /// Active rows include the current revision and its pages when present.
+    func fetchProjectDrawings(projectId: UUID) async throws -> [RemoteDrawing]
 }
 
 enum DrawingRemoteError: LocalizedError, Equatable {
@@ -57,6 +97,84 @@ struct SupabaseDrawingRemoteStore: DrawingRemoteStore {
             return .alreadyPresent
         }
         return .created
+    }
+
+    func fetchProjectDrawings(projectId: UUID) async throws -> [RemoteDrawing] {
+        let drawingRows: [RemoteDrawingRow] = try await client
+            .from("drawings")
+            .select("id,project_id,folder_id,name,discipline,location,created_at,deleted_at")
+            .eq("project_id", value: projectId.uuidString)
+            .order("created_at", ascending: true)
+            .execute()
+            .value
+
+        let activeIds = drawingRows
+            .filter { $0.deletedAt == nil }
+            .map(\.id.uuidString)
+        var revisionsByDrawing: [UUID: RemoteRevisionPullRow] = [:]
+        var pagesByRevision: [UUID: [RemotePageRow]] = [:]
+
+        if !activeIds.isEmpty {
+            let revisionRows: [RemoteRevisionPullRow] = try await client
+                .from("drawing_revisions")
+                .select(
+                    "id,drawing_id,revision_label,storage_path,original_file_name,page_count,drawing_date,is_current,deleted_at"
+                )
+                .in("drawing_id", values: activeIds)
+                .eq("is_current", value: true)
+                .is("deleted_at", value: nil)
+                .execute()
+                .value
+            revisionsByDrawing = Dictionary(
+                uniqueKeysWithValues: revisionRows.map { ($0.drawingId, $0) }
+            )
+
+            let revisionIds = revisionRows.map(\.id.uuidString)
+            if !revisionIds.isEmpty {
+                let pageRows: [RemotePageRow] = try await client
+                    .from("drawing_pages")
+                    .select("id,revision_id,page_index,deleted_at")
+                    .in("revision_id", values: revisionIds)
+                    .is("deleted_at", value: nil)
+                    .order("page_index", ascending: true)
+                    .execute()
+                    .value
+                pagesByRevision = Dictionary(grouping: pageRows, by: \.revisionId)
+            }
+        }
+
+        return drawingRows.map { row in
+            let revision: RemoteDrawingRevision?
+            if let rev = revisionsByDrawing[row.id] {
+                let pages = (pagesByRevision[rev.id] ?? []).map {
+                    RemoteDrawingPage(id: $0.id, revisionId: $0.revisionId, pageIndex: $0.pageIndex)
+                }
+                revision = RemoteDrawingRevision(
+                    id: rev.id,
+                    drawingId: rev.drawingId,
+                    revisionLabel: rev.revisionLabel,
+                    storagePath: rev.storagePath,
+                    originalFileName: rev.originalFileName,
+                    pageCount: rev.pageCount,
+                    drawingDate: rev.drawingDate.flatMap(Self.parseDrawingDate),
+                    isCurrent: rev.isCurrent,
+                    pages: pages
+                )
+            } else {
+                revision = nil
+            }
+            return RemoteDrawing(
+                id: row.id,
+                projectId: row.projectId,
+                folderId: row.folderId,
+                name: row.name,
+                discipline: row.discipline,
+                location: row.location,
+                createdAt: row.createdAt ?? Date(),
+                deletedAt: row.deletedAt,
+                currentRevision: revision
+            )
+        }
     }
 
     // MARK: - Drawing
@@ -273,6 +391,19 @@ struct SupabaseDrawingRemoteStore: DrawingRemoteStore {
         let text = error.localizedDescription.lowercased()
         return text.contains("duplicate") || text.contains("unique") || text.contains("23505")
     }
+
+    /// Parses Postgres `date` (`yyyy-MM-dd`) or ISO8601 timestamps from nested selects.
+    private static func parseDrawingDate(_ raw: String) -> Date? {
+        if let date = SQLiteDateCoding.date(from: raw) {
+            return date
+        }
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: raw)
+    }
 }
 
 // MARK: - Insert / row DTOs
@@ -429,6 +560,31 @@ private struct RemoteRevisionRow: Decodable {
         case storagePath = "storage_path"
         case originalFileName = "original_file_name"
         case pageCount = "page_count"
+        case isCurrent = "is_current"
+        case deletedAt = "deleted_at"
+    }
+}
+
+/// Pull-only revision row; `drawing_date` stays a string for Postgres `date` decoding.
+private struct RemoteRevisionPullRow: Decodable {
+    let id: UUID
+    let drawingId: UUID
+    let revisionLabel: String?
+    let storagePath: String
+    let originalFileName: String?
+    let pageCount: Int
+    let drawingDate: String?
+    let isCurrent: Bool
+    let deletedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case drawingId = "drawing_id"
+        case revisionLabel = "revision_label"
+        case storagePath = "storage_path"
+        case originalFileName = "original_file_name"
+        case pageCount = "page_count"
+        case drawingDate = "drawing_date"
         case isCurrent = "is_current"
         case deletedAt = "deleted_at"
     }

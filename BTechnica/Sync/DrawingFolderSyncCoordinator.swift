@@ -60,15 +60,17 @@ final class DrawingFolderSyncCoordinator {
         rescheduleRequested = false
     }
 
-    /// Runs push then pull once. Respects cancellation / generation invalidation.
+    /// Runs push then folder pull then drawing metadata pull once.
     /// Pass `database` for isolated coordinator checks; production omits it (shared user DB).
     @discardableResult
     func syncNow(
         userId: UUID,
         projectId: UUID,
         remote: DrawingFolderRemoteStore = SupabaseDrawingFolderRemoteStore(),
+        drawingRemote: DrawingRemoteStore = SupabaseDrawingRemoteStore(),
         push: SyncOutboxPushService = .shared,
         pull: DrawingFolderPullService = .shared,
+        drawingPull: DrawingPullService = .shared,
         onApplied: (@MainActor () -> Void)? = nil,
         database: AppDatabase? = nil
     ) async -> DrawingFolderSyncResult? {
@@ -101,30 +103,46 @@ final class DrawingFolderSyncCoordinator {
             return nil
         }
 
-        // 2) Pull remote. Pending outbox rows (push failures / other projects) stay protected
-        //    inside applyRemoteDrawingFolderPull.
+        // 2) Pull folders first so drawing.folder_id FKs resolve.
+        //    Pending outbox rows stay protected inside applyRemoteDrawingFolderPull.
         let pullResult = await pull.pull(
             userId: userId,
             projectId: projectId,
             remote: remote,
+            onApplied: nil,
+            database: database
+        )
+        guard !Task.isCancelled, token == generation,
+              lastUserId == userId, lastProjectId == projectId
+        else {
+            coordinatorLog.info("Folder sync aborted after folder pull (stale/cancelled)")
+            return nil
+        }
+
+        // 3) Pull drawing metadata (no PDF download). Pending drawing outbox rows stay protected.
+        let drawingPullResult = await drawingPull.pull(
+            userId: userId,
+            projectId: projectId,
+            remote: drawingRemote,
             onApplied: refreshHandler,
             database: database
         )
         guard !Task.isCancelled, token == generation,
               lastUserId == userId, lastProjectId == projectId
         else {
-            coordinatorLog.info("Folder sync aborted after pull (stale/cancelled)")
+            coordinatorLog.info("Folder sync aborted after drawing pull (stale/cancelled)")
             return nil
         }
 
         let result = DrawingFolderSyncResult(
             userId: userId,
             projectId: projectId,
-            pull: pullResult
+            pull: pullResult,
+            drawingPull: drawingPullResult
         )
         lastResult = result
         coordinatorLog.info(
-            "Folder sync finished project=\(projectId.uuidString, privacy: .public) pull=\(String(describing: pullResult), privacy: .public)"
+            "Folder sync finished project=\(projectId.uuidString, privacy: .public) folders=\(String(describing: pullResult), privacy: .public) drawings=\(String(describing: drawingPullResult), privacy: .public)"
         )
         return result
     }
@@ -187,4 +205,5 @@ struct DrawingFolderSyncResult: Equatable {
     var userId: UUID
     var projectId: UUID
     var pull: DrawingFolderPullApplyResult?
+    var drawingPull: DrawingPullApplyResult?
 }

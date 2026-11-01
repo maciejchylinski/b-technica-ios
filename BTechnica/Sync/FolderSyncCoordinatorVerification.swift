@@ -95,6 +95,7 @@ enum FolderSyncCoordinatorVerification {
             userId: userId,
             projectId: projectId,
             remote: remote,
+            drawingRemote: EmptyDrawingRemoteStore(),
             database: db
         )
         guard let result, let pull = result.pull else {
@@ -149,6 +150,7 @@ enum FolderSyncCoordinatorVerification {
             userId: userId,
             projectId: projectId,
             remote: remote,
+            drawingRemote: EmptyDrawingRemoteStore(),
             database: db
         )
         let afterFail = try db.fetchDrawingFolders(projectId: projectId)
@@ -165,6 +167,7 @@ enum FolderSyncCoordinatorVerification {
             userId: userId,
             projectId: projectId,
             remote: remote,
+            drawingRemote: EmptyDrawingRemoteStore(),
             database: db
         )
         guard afterCancel != nil else {
@@ -200,6 +203,17 @@ enum FolderSyncCoordinatorVerification {
 
     private final class ResultBox: @unchecked Sendable {
         var value: Result?
+    }
+}
+
+/// No-op drawing remote for folder-only coordinator checks.
+struct EmptyDrawingRemoteStore: DrawingRemoteStore {
+    func ensureCreated(_ payload: DrawingMetadataPayload) async throws -> DrawingRemoteCreateResult {
+        .alreadyPresent
+    }
+
+    func fetchProjectDrawings(projectId: UUID) async throws -> [RemoteDrawing] {
+        []
     }
 }
 

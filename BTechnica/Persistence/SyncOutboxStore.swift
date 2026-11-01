@@ -342,7 +342,7 @@ extension AppDatabase {
         )
     }
 
-    private static func upsertSyncState(
+    static func upsertSyncState(
         key: String,
         value: String,
         now: Date,

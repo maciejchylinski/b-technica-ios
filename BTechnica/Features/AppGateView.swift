@@ -27,6 +27,7 @@ struct AppGateView: View {
             if userId == nil {
                 DrawingFolderSyncCoordinator.shared.cancel()
                 DrawingPDFUploadCoordinator.shared.cancel()
+                DrawingPDFDownloadCoordinator.shared.cancel()
             }
             projects.bind(userId: userId)
             if let userId {
@@ -42,9 +43,11 @@ struct AppGateView: View {
             if open {
                 scheduleFolderSync()
                 scheduleDrawingPDFUploads()
+                scheduleDrawingPDFDownloads()
             } else {
                 DrawingFolderSyncCoordinator.shared.cancel()
                 DrawingPDFUploadCoordinator.shared.cancel()
+                DrawingPDFDownloadCoordinator.shared.cancel()
             }
         }
         .onChange(of: projects.projects) { _, _ in
@@ -55,9 +58,11 @@ struct AppGateView: View {
             case .signedIn:
                 scheduleFolderSync()
                 scheduleDrawingPDFUploads()
+                scheduleDrawingPDFDownloads()
             case .signedOut, .loading:
                 DrawingFolderSyncCoordinator.shared.cancel()
                 DrawingPDFUploadCoordinator.shared.cancel()
+                DrawingPDFDownloadCoordinator.shared.cancel()
             }
         }
         .onAppear {
@@ -68,6 +73,7 @@ struct AppGateView: View {
             syncWorkspace()
             scheduleFolderSync()
             scheduleDrawingPDFUploads()
+            scheduleDrawingPDFDownloads()
         }
         .task(id: auth.userId) {
             guard auth.phase == .signedIn else { return }
@@ -127,6 +133,7 @@ struct AppGateView: View {
             boundProjectId = projectId
             scheduleFolderSync()
             scheduleDrawingPDFUploads()
+            scheduleDrawingPDFDownloads()
         } else {
             store?.applyCloudProjectName(cloud.name)
         }
@@ -156,6 +163,19 @@ struct AppGateView: View {
             store.scheduleDrawingPDFUploads()
         } else {
             DrawingPDFUploadCoordinator.shared.schedule(userId: userId, projectId: projectId)
+        }
+    }
+
+    private func scheduleDrawingPDFDownloads() {
+        guard auth.phase == .signedIn,
+              projects.isWorkspaceOpen,
+              let userId = auth.userId,
+              let projectId = projects.selectedProjectId
+        else { return }
+        if let store {
+            store.scheduleDrawingPDFDownloads()
+        } else {
+            DrawingPDFDownloadCoordinator.shared.schedule(userId: userId, projectId: projectId)
         }
     }
 }

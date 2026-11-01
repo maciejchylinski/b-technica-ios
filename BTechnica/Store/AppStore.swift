@@ -21,6 +21,10 @@ final class AppStore: ObservableObject {
     @Published private(set) var data: AppData
     /// User-visible local storage problem (load or save). Cleared on successful save.
     @Published private(set) var storageError: String?
+    /// Drawing ids with an in-flight on-demand PDF download.
+    @Published private(set) var pdfDownloadInFlight: Set<UUID> = []
+    /// Last download error per drawing id (cleared on success / new attempt).
+    @Published private(set) var pdfDownloadErrors: [UUID: String] = [:]
 
     /// Authenticated account that owns this local workspace.
     let userId: UUID
@@ -236,7 +240,23 @@ final class AppStore: ObservableObject {
         }
     }
 
-    /// Schedules coordinated folder sync (push pending, then pull) for this workspace.
+    /// Reloads drawings + folders from SQLite after remote pull. Does not enqueue outbox ops.
+    /// Does not create PDF files; drawings without a local PDF remain unavailable until download.
+    func reloadDrawingsAndFoldersFromSQLite() {
+        guard drawingsUseSQLite, let database else { return }
+        do {
+            let folders = try database.fetchDrawingFolders(projectId: projectId)
+            let drawings = try database.fetchDrawings(projectId: projectId)
+            var next = data
+            next.drawingFolders = folders
+            next.drawings = drawings
+            data = next
+        } catch {
+            storageError = error.localizedDescription
+        }
+    }
+
+    /// Schedules coordinated sync (push pending, then folder + drawing metadata pull).
     /// Also reconciles drawing metadata outbox for drawings whose PDF upload already completed.
     func scheduleDrawingFolderSync() {
         guard drawingsUseSQLite else { return }
@@ -244,7 +264,7 @@ final class AppStore: ObservableObject {
             try? database.reconcileDrawingMetadataOutbox(projectId: projectId)
         }
         DrawingFolderSyncCoordinator.shared.schedule(userId: userId, projectId: projectId) { [weak self] in
-            self?.reloadDrawingFoldersFromSQLite()
+            self?.reloadDrawingsAndFoldersFromSQLite()
         }
     }
 
@@ -658,6 +678,79 @@ final class AppStore: ObservableObject {
     func scheduleDrawingPDFUploads() {
         guard drawingsUseSQLite else { return }
         DrawingPDFUploadCoordinator.shared.schedule(userId: userId, projectId: projectId)
+    }
+
+    /// True when the drawing's PDF bytes exist under the project Drawings directory.
+    func isLocalPDFAvailable(for drawing: Drawing) -> Bool {
+        fileManager.fileExists(atPath: fileURL(for: drawing).path)
+    }
+
+    func isDownloadingPDF(drawingId: UUID) -> Bool {
+        pdfDownloadInFlight.contains(drawingId)
+    }
+
+    func pdfDownloadError(drawingId: UUID) -> String? {
+        pdfDownloadErrors[drawingId]
+    }
+
+    /// On-demand download of a remote drawing PDF into the local Drawings folder.
+    /// Uses the pending `file_transfers` download row from metadata pull (or a completed upload path).
+    func downloadDrawingPDF(_ drawing: Drawing) {
+        guard drawingsUseSQLite, let database else {
+            storageError = "Local database unavailable for PDF download"
+            return
+        }
+        guard drawing.projectId == projectId else { return }
+        if isLocalPDFAvailable(for: drawing) {
+            pdfDownloadErrors[drawing.id] = nil
+            return
+        }
+        guard !pdfDownloadInFlight.contains(drawing.id) else { return }
+
+        do {
+            if try database.fetchDrawingPDFDownload(drawingId: drawing.id) == nil {
+                _ = try database.ensureDrawingPDFDownloadQueued(
+                    drawingId: drawing.id,
+                    projectId: projectId,
+                    fileName: drawing.fileName
+                )
+            }
+            guard try database.fetchDrawingPDFDownload(drawingId: drawing.id) != nil else {
+                pdfDownloadErrors[drawing.id] = "Remote PDF path unknown — sync the project first"
+                return
+            }
+        } catch {
+            pdfDownloadErrors[drawing.id] = error.localizedDescription
+            return
+        }
+
+        pdfDownloadInFlight.insert(drawing.id)
+        pdfDownloadErrors[drawing.id] = nil
+        let drawingId = drawing.id
+        Task { @MainActor in
+            let ok = await DrawingPDFDownloadCoordinator.shared.downloadNow(
+                drawingId: drawingId,
+                userId: userId,
+                projectId: projectId,
+                database: database
+            )
+            pdfDownloadInFlight.remove(drawingId)
+            if ok, isLocalPDFAvailable(for: drawing) {
+                pdfDownloadErrors[drawingId] = nil
+                // Nudge observers so DrawingDetailView can mount PDFKitView.
+                objectWillChange.send()
+            } else if !ok {
+                let message = (try? database.fetchDrawingPDFDownload(drawingId: drawingId))?.error
+                    ?? "PDF download failed"
+                pdfDownloadErrors[drawingId] = message
+            }
+        }
+    }
+
+    /// Retries incomplete drawing PDF downloads after reconnect (does not auto-fetch all remotes).
+    func scheduleDrawingPDFDownloads() {
+        guard drawingsUseSQLite else { return }
+        DrawingPDFDownloadCoordinator.shared.schedule(userId: userId, projectId: projectId)
     }
 
     /// Copies the PDF and reads `pageCount` off the main thread.

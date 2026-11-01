@@ -127,49 +127,12 @@ struct DrawingDetailView: View {
 
     @ViewBuilder
     private func content(for drawing: Drawing) -> some View {
-        ZStack(alignment: .bottom) {
-            PDFKitView(url: store.fileURL(for: drawing),
-                       captureEnabled: isCapturing,
-                       markers: allMarkers,
-                       areas: allAreaOverlays,
-                       editableVertices: editableVertices,
-                       onTap: handleTap,
-                       onMarkerTap: handleMarkerTap,
-                       onAreaTap: handleAreaTap,
-                       onVertexDrag: handleVertexDrag)
-                .ignoresSafeArea(edges: .bottom)
-
-            VStack(spacing: 10) {
-                if let preview = previewIssue, mode == .idle {
-                    IssuePreviewCard(issue: preview) {
-                        issueToOpen = preview
-                        previewIssueId = nil
-                    } onDismiss: {
-                        previewIssueId = nil
-                    }
-                    .padding(.horizontal)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-
-                if let area = previewArea, mode == .idle, previewIssue == nil {
-                    AreaPreviewCard(area: area) {
-                        areaBeingEdited = area
-                        showAreaForm = true
-                    } onEditShape: {
-                        startEditingAreaShape(area)
-                    } onDelete: {
-                        showDeleteAreaConfirm = true
-                    } onDismiss: {
-                        previewAreaId = nil
-                    }
-                    .padding(.horizontal)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-
-                overlay
+        Group {
+            if store.isLocalPDFAvailable(for: drawing) {
+                localPDFContent(for: drawing)
+            } else {
+                missingPDFContent(for: drawing)
             }
-            .animation(.easeInOut(duration: 0.2), value: previewIssueId)
-            .animation(.easeInOut(duration: 0.2), value: previewAreaId)
         }
         .navigationTitle(drawing.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -264,35 +227,119 @@ struct DrawingDetailView: View {
         }
     }
 
+    @ViewBuilder
+    private func localPDFContent(for drawing: Drawing) -> some View {
+        ZStack(alignment: .bottom) {
+            PDFKitView(
+                url: store.fileURL(for: drawing),
+                captureEnabled: isCapturing,
+                markers: allMarkers,
+                areas: allAreaOverlays,
+                editableVertices: editableVertices,
+                onTap: handleTap,
+                onMarkerTap: handleMarkerTap,
+                onAreaTap: handleAreaTap,
+                onVertexDrag: handleVertexDrag
+            )
+            .ignoresSafeArea(edges: .bottom)
+
+            VStack(spacing: 10) {
+                if let preview = previewIssue, mode == .idle {
+                    IssuePreviewCard(issue: preview) {
+                        issueToOpen = preview
+                        previewIssueId = nil
+                    } onDismiss: {
+                        previewIssueId = nil
+                    }
+                    .padding(.horizontal)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+
+                if let area = previewArea, mode == .idle, previewIssue == nil {
+                    AreaPreviewCard(area: area) {
+                        areaBeingEdited = area
+                        showAreaForm = true
+                    } onEditShape: {
+                        startEditingAreaShape(area)
+                    } onDelete: {
+                        showDeleteAreaConfirm = true
+                    } onDismiss: {
+                        previewAreaId = nil
+                    }
+                    .padding(.horizontal)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+
+                overlay
+            }
+            .animation(.easeInOut(duration: 0.2), value: previewIssueId)
+            .animation(.easeInOut(duration: 0.2), value: previewAreaId)
+        }
+    }
+
+    @ViewBuilder
+    private func missingPDFContent(for drawing: Drawing) -> some View {
+        let downloading = store.isDownloadingPDF(drawingId: drawing.id)
+        let errorText = store.pdfDownloadError(drawingId: drawing.id)
+        ContentUnavailableView {
+            Label("PDF not on this device", systemImage: "arrow.down.doc")
+        } description: {
+            Text("Download this drawing to view it offline in PDFKit.")
+        } actions: {
+            if downloading {
+                ProgressView("Downloading…")
+            } else {
+                Button("Download PDF") {
+                    store.downloadDrawingPDF(drawing)
+                }
+                .buttonStyle(.borderedProminent)
+                if let errorText {
+                    Text(errorText)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                    Button("Retry") {
+                        store.downloadDrawingPDF(drawing)
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Toolbar
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
-            switch mode {
-            case .idle:
-                Button("Add issue") { startPlacingIssue() }
-                Menu {
-                    Button("Draw area") { startDrawingArea() }
-                    Button(showAreaOverlays ? "Hide areas" : "Show areas") {
-                        showAreaOverlays.toggle()
-                        if !showAreaOverlays { previewAreaId = nil }
+            let pdfReady = drawing.map { store.isLocalPDFAvailable(for: $0) } ?? false
+            if !pdfReady {
+                Button("Edit drawing details") { showDetailsEditor = true }
+            } else {
+                switch mode {
+                case .idle:
+                    Button("Add issue") { startPlacingIssue() }
+                    Menu {
+                        Button("Draw area") { startDrawingArea() }
+                        Button(showAreaOverlays ? "Hide areas" : "Show areas") {
+                            showAreaOverlays.toggle()
+                            if !showAreaOverlays { previewAreaId = nil }
+                        }
+                        Divider()
+                        Button("Set scale") { startCalibration() }
+                        Button("Edit drawing details") { showDetailsEditor = true }
+                    } label: {
+                        Label("More", systemImage: "ellipsis.circle")
                     }
-                    Divider()
-                    Button("Set scale") { startCalibration() }
-                    Button("Edit drawing details") { showDetailsEditor = true }
-                } label: {
-                    Label("More", systemImage: "ellipsis.circle")
+                case .drawingArea:
+                    Button("Finish") { finishDrawingArea() }
+                        .disabled(!canFinishArea)
+                    Button("Cancel", role: .cancel) { cancelActiveMode() }
+                case .editingAreaShape:
+                    Button("Save") { saveAreaShapeEdit() }
+                    Button("Cancel", role: .cancel) { cancelActiveMode() }
+                case .placingIssue, .calibrating:
+                    Button("Cancel", role: .cancel) { cancelActiveMode() }
                 }
-            case .drawingArea:
-                Button("Finish") { finishDrawingArea() }
-                    .disabled(!canFinishArea)
-                Button("Cancel", role: .cancel) { cancelActiveMode() }
-            case .editingAreaShape:
-                Button("Save") { saveAreaShapeEdit() }
-                Button("Cancel", role: .cancel) { cancelActiveMode() }
-            case .placingIssue, .calibrating:
-                Button("Cancel", role: .cancel) { cancelActiveMode() }
             }
         }
     }

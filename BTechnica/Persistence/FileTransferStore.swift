@@ -243,7 +243,174 @@ extension AppDatabase {
         }
     }
 
+    /// Pending (or existing) download row for a remote drawing PDF path.
+    /// Does not download bytes and never marks the transfer completed.
+    func fetchDrawingPDFDownload(drawingId: UUID) throws -> FileTransfer? {
+        try dbQueue.read { db in
+            try Self.fetchDrawingDownload(drawingId: drawingId, db: db)
+        }
+    }
+
+    /// Incomplete drawing PDF downloads for a project (pending / uploading / error), oldest first.
+    func fetchPendingDrawingPDFDownloads(projectId: UUID) throws -> [FileTransfer] {
+        let prefix = "\(projectId.uuidString)/"
+        return try dbQueue.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: """
+                SELECT id, entity_type, entity_id, local_relative_path, remote_path,
+                       direction, status, bytes_total, bytes_done, error, created_at, updated_at
+                FROM file_transfers
+                WHERE entity_type = ?
+                  AND direction = ?
+                  AND status IN (?, ?, ?)
+                  AND remote_path LIKE ?
+                ORDER BY created_at ASC, id ASC
+                """,
+                arguments: [
+                    FileTransferEntityType.drawing.rawValue,
+                    FileTransferDirection.download.rawValue,
+                    FileTransferStatus.pending.rawValue,
+                    FileTransferStatus.uploading.rawValue,
+                    FileTransferStatus.error.rawValue,
+                    "\(prefix)%"
+                ]
+            )
+            return try rows.map { try Self.fileTransfer(from: $0) }
+        }
+    }
+
+    /// Ensures a pending download row exists for `drawingId`, reusing a completed upload's
+    /// remote path when the download placeholder is missing. Does not download bytes.
+    @discardableResult
+    func ensureDrawingPDFDownloadQueued(
+        drawingId: UUID,
+        projectId: UUID,
+        fileName: String,
+        now: Date = Date()
+    ) throws -> FileTransfer? {
+        try dbQueue.write { db in
+            if let existing = try Self.fetchDrawingDownload(drawingId: drawingId, db: db) {
+                return existing
+            }
+            guard let upload = try Self.fetchDrawingUpload(drawingId: drawingId, db: db),
+                  let remotePath = upload.remotePath,
+                  !remotePath.isEmpty
+            else {
+                return nil
+            }
+            try Self.upsertPendingDrawingPDFDownload(
+                drawingId: drawingId,
+                projectId: projectId,
+                fileName: fileName,
+                remotePath: remotePath,
+                now: now,
+                db: db
+            )
+            return try Self.fetchDrawingDownload(drawingId: drawingId, db: db)
+        }
+    }
+
     // MARK: - Internals
+
+    /// Upserts a pending download placeholder so remote PDF paths survive pull without
+    /// implying the local file is available. Does not touch upload rows.
+    static func upsertPendingDrawingPDFDownload(
+        drawingId: UUID,
+        projectId: UUID,
+        fileName: String,
+        remotePath: String,
+        transferId: UUID = UUID(),
+        now: Date = Date(),
+        db: Database
+    ) throws {
+        let localRelativePath = drawingPDFLocalRelativePath(
+            projectId: projectId,
+            fileName: fileName
+        )
+        if let existing = try fetchDrawingDownload(drawingId: drawingId, db: db) {
+            // Keep completed downloads intact; refresh path/name on incomplete rows only.
+            if existing.status == .completed { return }
+            try db.execute(
+                sql: """
+                UPDATE file_transfers
+                SET local_relative_path = ?,
+                    remote_path = ?,
+                    status = ?,
+                    error = NULL,
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                arguments: [
+                    localRelativePath,
+                    remotePath,
+                    FileTransferStatus.pending.rawValue,
+                    SQLiteDateCoding.string(from: now),
+                    existing.id.uuidString
+                ]
+            )
+            return
+        }
+
+        let stamp = SQLiteDateCoding.string(from: now)
+        try db.execute(
+            sql: """
+            INSERT INTO file_transfers
+              (id, entity_type, entity_id, local_relative_path, remote_path,
+               direction, status, bytes_total, bytes_done, error, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 0, NULL, ?, ?)
+            """,
+            arguments: [
+                transferId.uuidString,
+                FileTransferEntityType.drawing.rawValue,
+                drawingId.uuidString,
+                localRelativePath,
+                remotePath,
+                FileTransferDirection.download.rawValue,
+                FileTransferStatus.pending.rawValue,
+                stamp,
+                stamp
+            ]
+        )
+    }
+
+    static func deleteDrawingDownloadTransfers(drawingId: UUID, db: Database) throws {
+        try db.execute(
+            sql: """
+            DELETE FROM file_transfers
+            WHERE entity_type = ?
+              AND entity_id = ?
+              AND direction = ?
+            """,
+            arguments: [
+                FileTransferEntityType.drawing.rawValue,
+                drawingId.uuidString,
+                FileTransferDirection.download.rawValue
+            ]
+        )
+    }
+
+    static func fetchDrawingDownload(drawingId: UUID, db: Database) throws -> FileTransfer? {
+        let row = try Row.fetchOne(
+            db,
+            sql: """
+            SELECT id, entity_type, entity_id, local_relative_path, remote_path,
+                   direction, status, bytes_total, bytes_done, error, created_at, updated_at
+            FROM file_transfers
+            WHERE entity_type = ?
+              AND entity_id = ?
+              AND direction = ?
+            ORDER BY created_at ASC, id ASC
+            LIMIT 1
+            """,
+            arguments: [
+                FileTransferEntityType.drawing.rawValue,
+                drawingId.uuidString,
+                FileTransferDirection.download.rawValue
+            ]
+        )
+        return try row.map { try fileTransfer(from: $0) }
+    }
 
     static func fetchDrawingUpload(drawingId: UUID, db: Database) throws -> FileTransfer? {
         let row = try Row.fetchOne(

@@ -237,8 +237,12 @@ final class AppStore: ObservableObject {
     }
 
     /// Schedules coordinated folder sync (push pending, then pull) for this workspace.
+    /// Also reconciles drawing metadata outbox for drawings whose PDF upload already completed.
     func scheduleDrawingFolderSync() {
         guard drawingsUseSQLite else { return }
+        if let database {
+            try? database.reconcileDrawingMetadataOutbox(projectId: projectId)
+        }
         DrawingFolderSyncCoordinator.shared.schedule(userId: userId, projectId: projectId) { [weak self] in
             self?.reloadDrawingFoldersFromSQLite()
         }
@@ -627,7 +631,33 @@ final class AppStore: ObservableObject {
 
         data.drawings.append(drawing)
         persist()
+        enqueueDrawingPDFUploadIfNeeded(drawing, localURL: destinationURL)
         return drawing
+    }
+
+    /// Queues a Storage upload for a newly imported PDF only (never bulk-legacy).
+    /// Local file is left in place; completion is recorded only after remote confirm.
+    private func enqueueDrawingPDFUploadIfNeeded(_ drawing: Drawing, localURL: URL) {
+        guard drawingsUseSQLite, let database else { return }
+        let bytes = (try? fileManager.attributesOfItem(atPath: localURL.path)[.size] as? NSNumber)?
+            .int64Value
+        do {
+            _ = try database.enqueueDrawingPDFUpload(
+                drawingId: drawing.id,
+                projectId: projectId,
+                fileName: drawing.fileName,
+                bytesTotal: bytes
+            )
+            DrawingPDFUploadCoordinator.shared.schedule(userId: userId, projectId: projectId)
+        } catch {
+            storageError = error.localizedDescription
+        }
+    }
+
+    /// Retries incomplete drawing PDF uploads for this workspace (network / restart recovery).
+    func scheduleDrawingPDFUploads() {
+        guard drawingsUseSQLite else { return }
+        DrawingPDFUploadCoordinator.shared.schedule(userId: userId, projectId: projectId)
     }
 
     /// Copies the PDF and reads `pageCount` off the main thread.

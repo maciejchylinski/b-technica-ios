@@ -16,9 +16,10 @@ enum SyncOutboxOperation: String, Equatable {
     case delete
 }
 
-/// Entity kinds that may appear in the outbox. Folder sync is first.
+/// Entity kinds that may appear in the outbox. Folders first; drawings after PDF upload.
 enum SyncOutboxEntityType: String, Equatable {
     case drawingFolder = "drawing_folder"
+    case drawing = "drawing"
 }
 
 /// One durable outbox row. `id` is the stable operation UUID used across retries.
@@ -189,7 +190,175 @@ extension AppDatabase {
         }
     }
 
+    /// Enqueues drawing metadata create after a confirmed PDF upload.
+    /// Idempotent: skips when already marked pushed or an outbox create is pending.
+    @discardableResult
+    func enqueueDrawingMetadataSyncIfNeeded(
+        drawingId: UUID,
+        operationId: UUID = UUID()
+    ) throws -> Bool {
+        try dbQueue.write { db in
+            if try Self.syncStateValue(
+                key: Self.drawingMetadataSyncKey(drawingId),
+                db: db
+            ) != nil {
+                return false
+            }
+            if try Self.hasOutboxEntry(
+                entityType: .drawing,
+                entityId: drawingId,
+                operation: .create,
+                db: db
+            ) {
+                return false
+            }
+
+            guard let transfer = try Self.fetchDrawingUpload(drawingId: drawingId, db: db),
+                  transfer.status == .completed,
+                  let remotePath = transfer.remotePath,
+                  let revisionId = Self.revisionId(fromRemotePath: remotePath)
+            else {
+                return false
+            }
+
+            guard let drawing = try Self.fetchDrawingRow(id: drawingId, db: db) else {
+                return false
+            }
+
+            let payload = DrawingMetadataPayload(
+                id: drawing.id,
+                projectId: drawing.projectId,
+                folderId: drawing.folderId,
+                name: drawing.name,
+                fileName: drawing.fileName,
+                pageCount: drawing.pageCount,
+                createdDate: drawing.createdDate,
+                revisionLabel: drawing.revision,
+                discipline: drawing.discipline,
+                location: drawing.location,
+                drawingDate: drawing.drawingDate,
+                revisionId: revisionId,
+                storagePath: remotePath
+            )
+            try Self.insertOutboxEntry(
+                operationId: operationId,
+                entityType: .drawing,
+                entityId: drawing.id,
+                operation: .create,
+                payloadJSON: try Self.drawingPayloadJSON(payload),
+                db: db
+            )
+            return true
+        }
+    }
+
+    /// For completed PDF uploads in a project, enqueue metadata sync when not yet pushed.
+    /// Does not enqueue uploads for drawings that never had a transfer (legacy stay local).
+    func reconcileDrawingMetadataOutbox(projectId: UUID) throws {
+        let completed = try fetchCompletedDrawingPDFUploads(projectId: projectId)
+        for transfer in completed {
+            _ = try enqueueDrawingMetadataSyncIfNeeded(drawingId: transfer.entityId)
+        }
+    }
+
+    /// Records that drawing metadata reached Postgres (survives outbox row deletion).
+    func markDrawingMetadataPushed(drawingId: UUID, revisionId: UUID, now: Date = Date()) throws {
+        try dbQueue.write { db in
+            try Self.upsertSyncState(
+                key: Self.drawingMetadataSyncKey(drawingId),
+                value: revisionId.uuidString,
+                now: now,
+                db: db
+            )
+        }
+    }
+
     // MARK: - Internals
+
+    static func drawingMetadataSyncKey(_ drawingId: UUID) -> String {
+        "drawing_metadata_pushed:\(drawingId.uuidString)"
+    }
+
+    static func revisionId(fromRemotePath path: String) -> UUID? {
+        let parts = path.split(separator: "/").map(String.init)
+        guard parts.count == 2, parts[1].hasSuffix(".pdf") else { return nil }
+        let idPart = String(parts[1].dropLast(4))
+        return UUID(uuidString: idPart)
+    }
+
+    static func drawingPayloadJSON(_ payload: DrawingMetadataPayload) throws -> String {
+        var object: [String: Any] = [
+            "id": payload.id.uuidString,
+            "projectId": payload.projectId.uuidString,
+            "name": payload.name,
+            "fileName": payload.fileName,
+            "pageCount": payload.pageCount,
+            "createdDate": SQLiteDateCoding.string(from: payload.createdDate),
+            "revisionId": payload.revisionId.uuidString,
+            "storagePath": payload.storagePath
+        ]
+        if let folderId = payload.folderId {
+            object["folderId"] = folderId.uuidString
+        } else {
+            object["folderId"] = NSNull()
+        }
+        object["revision"] = payload.revisionLabel.map { $0 as Any } ?? NSNull()
+        object["discipline"] = payload.discipline.map { $0 as Any } ?? NSNull()
+        object["location"] = payload.location.map { $0 as Any } ?? NSNull()
+        if let drawingDate = payload.drawingDate {
+            object["drawingDate"] = SQLiteDateCoding.string(from: drawingDate)
+        } else {
+            object["drawingDate"] = NSNull()
+        }
+        let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        guard let text = String(data: data, encoding: .utf8) else {
+            throw SyncOutboxStoreError.payloadEncodingFailed
+        }
+        return text
+    }
+
+    private static func hasOutboxEntry(
+        entityType: SyncOutboxEntityType,
+        entityId: UUID,
+        operation: SyncOutboxOperation,
+        db: Database
+    ) throws -> Bool {
+        let count = try Int.fetchOne(
+            db,
+            sql: """
+            SELECT COUNT(*) FROM sync_outbox
+            WHERE entity_type = ? AND entity_id = ? AND operation = ?
+            """,
+            arguments: [entityType.rawValue, entityId.uuidString, operation.rawValue]
+        ) ?? 0
+        return count > 0
+    }
+
+    private static func syncStateValue(key: String, db: Database) throws -> String? {
+        try String.fetchOne(
+            db,
+            sql: "SELECT value FROM sync_state WHERE key = ?",
+            arguments: [key]
+        )
+    }
+
+    private static func upsertSyncState(
+        key: String,
+        value: String,
+        now: Date,
+        db: Database
+    ) throws {
+        try db.execute(
+            sql: """
+            INSERT INTO sync_state (key, value, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET
+              value = excluded.value,
+              updated_at = excluded.updated_at
+            """,
+            arguments: [key, value, SQLiteDateCoding.string(from: now)]
+        )
+    }
 
     static func insertOutboxEntry(
         operationId: UUID,

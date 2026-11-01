@@ -27,6 +27,27 @@ extension AppDatabase {
         }
     }
 
+    func fetchDrawing(id: UUID) throws -> Drawing? {
+        try dbQueue.read { db in
+            try Self.fetchDrawingRow(id: id, db: db)
+        }
+    }
+
+    func fetchDrawingFolder(id: UUID) throws -> DrawingFolder? {
+        try dbQueue.read { db in
+            let row = try Row.fetchOne(
+                db,
+                sql: """
+                SELECT id, project_id, parent_folder_id, name, sort_order, created_at
+                FROM drawing_folders
+                WHERE id = ?
+                """,
+                arguments: [id.uuidString]
+            )
+            return try row.map { try Self.folder(from: $0) }
+        }
+    }
+
     func fetchDrawings(projectId: UUID) throws -> [Drawing] {
         try dbQueue.read { db in
             let drawingRows = try Row.fetchAll(
@@ -313,6 +334,23 @@ extension AppDatabase {
             sortOrder: row["sort_order"],
             createdDate: SQLiteDateCoding.date(from: createdRaw) ?? Date()
         )
+    }
+
+    static func fetchDrawingRow(id: UUID, db: Database) throws -> Drawing? {
+        let row = try Row.fetchOne(
+            db,
+            sql: """
+            SELECT id, project_id, folder_id, name, file_name, page_count, created_at,
+                   revision, discipline, location, drawing_date
+            FROM drawings
+            WHERE id = ?
+            """,
+            arguments: [id.uuidString]
+        )
+        guard let row else { return nil }
+        var drawing = try drawing(from: row)
+        drawing.calibrations = try fetchCalibrations(drawingId: drawing.id, db: db)
+        return drawing
     }
 
     private static func drawing(from row: Row) throws -> Drawing {

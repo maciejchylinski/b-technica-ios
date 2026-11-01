@@ -152,6 +152,38 @@ struct BTechnicaApp: App {
                 fputs("BT_FOLDER_SYNC_COORDINATOR_VERIFY passed=\(result.passed) msg=\(result.message)\n", stderr)
             }
         }
+        if ProcessInfo.processInfo.arguments.contains("-BTVerifyLiveDrawingPDFUpload") {
+            let result = LiveDrawingPDFUploadVerification.run()
+            let payload: [String: Any] = [
+                "passed": result.passed,
+                "message": result.message
+            ]
+            if let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]),
+               let text = String(data: data, encoding: .utf8) {
+                let url = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("bt-live-drawing-pdf-upload-verify.json")
+                try? text.write(to: url, atomically: true, encoding: .utf8)
+                fputs("BT_LIVE_DRAWING_PDF_UPLOAD_VERIFY \(text)\n", stderr)
+            } else {
+                fputs("BT_LIVE_DRAWING_PDF_UPLOAD_VERIFY passed=\(result.passed) msg=\(result.message)\n", stderr)
+            }
+        }
+        if ProcessInfo.processInfo.arguments.contains("-BTVerifyLiveDrawingMetadataSync") {
+            let result = LiveDrawingMetadataSyncVerification.run()
+            let payload: [String: Any] = [
+                "passed": result.passed,
+                "message": result.message
+            ]
+            if let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]),
+               let text = String(data: data, encoding: .utf8) {
+                let url = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("bt-live-drawing-metadata-sync-verify.json")
+                try? text.write(to: url, atomically: true, encoding: .utf8)
+                fputs("BT_LIVE_DRAWING_METADATA_SYNC_VERIFY \(text)\n", stderr)
+            } else {
+                fputs("BT_LIVE_DRAWING_METADATA_SYNC_VERIFY passed=\(result.passed) msg=\(result.message)\n", stderr)
+            }
+        }
         #endif
     }
 

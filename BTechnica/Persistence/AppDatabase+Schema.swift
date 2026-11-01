@@ -3,7 +3,7 @@ import GRDB
 
 extension AppDatabase {
     /// Initial local schema: project-scoped entities, user-global dictionaries,
-    /// and empty sync scaffolding (`sync_outbox`, `sync_state`, `file_transfers`).
+    /// and sync scaffolding (`sync_outbox`, `sync_state`, `file_transfers` for PDF uploads).
     static func createV1Schema(_ db: Database) throws {
         // MARK: Project-scoped
 

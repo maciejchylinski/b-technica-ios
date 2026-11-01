@@ -33,11 +33,19 @@ struct AppGateView: View {
         .onChange(of: projects.selectedProjectId) { _, _ in
             syncWorkspace()
         }
-        .onChange(of: projects.isWorkspaceOpen) { _, _ in
+        .onChange(of: projects.isWorkspaceOpen) { _, open in
             syncWorkspace()
+            if open {
+                scheduleOutboxPush()
+            }
         }
         .onChange(of: projects.projects) { _, _ in
             syncWorkspace()
+        }
+        .onChange(of: auth.phase) { _, phase in
+            if phase == .signedIn {
+                scheduleOutboxPush()
+            }
         }
         .onAppear {
             projects.bind(userId: auth.userId)
@@ -45,6 +53,7 @@ struct AppGateView: View {
                 LocalPersistenceBootstrap.prepareIfNeeded(userId: userId)
             }
             syncWorkspace()
+            scheduleOutboxPush()
         }
         .task(id: auth.userId) {
             guard auth.phase == .signedIn else { return }
@@ -56,6 +65,7 @@ struct AppGateView: View {
             }
             await projects.load(reopenWorkspace: true)
             syncWorkspace()
+            scheduleOutboxPush()
         }
     }
 
@@ -100,8 +110,18 @@ struct AppGateView: View {
                 createdDate: cloud.createdAt
             )
             boundProjectId = projectId
+            scheduleOutboxPush()
         } else {
             store?.applyCloudProjectName(cloud.name)
         }
+    }
+
+    private func scheduleOutboxPush() {
+        guard auth.phase == .signedIn,
+              projects.isWorkspaceOpen,
+              let userId = auth.userId,
+              let projectId = projects.selectedProjectId
+        else { return }
+        SyncOutboxPushService.shared.schedule(userId: userId, projectId: projectId)
     }
 }

@@ -414,6 +414,9 @@ final class AppStore: ObservableObject {
         }
         data.drawingFolders.append(created)
         persist()
+        if drawingsUseSQLite {
+            SyncOutboxPushService.shared.schedule(userId: userId, projectId: projectId)
+        }
         return created
     }
 
@@ -446,6 +449,9 @@ final class AppStore: ObservableObject {
         }
         data.drawingFolders[index].name = trimmed
         persist()
+        if drawingsUseSQLite {
+            SyncOutboxPushService.shared.schedule(userId: userId, projectId: projectId)
+        }
         return nil
     }
 
@@ -471,6 +477,9 @@ final class AppStore: ObservableObject {
         }
         data.drawingFolders.removeAll { $0.id == id }
         persist()
+        if drawingsUseSQLite {
+            SyncOutboxPushService.shared.schedule(userId: userId, projectId: projectId)
+        }
         return nil
     }
 

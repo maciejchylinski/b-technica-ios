@@ -125,6 +125,13 @@ extension AppDatabase {
         }
     }
 
+    /// Allows immediate retry after reconnect without changing operation identity/order.
+    func clearOutboxBackoff() throws {
+        try dbQueue.write { db in
+            try db.execute(sql: "UPDATE sync_outbox SET next_attempt_at = NULL")
+        }
+    }
+
     /// Creates/upserts a folder and enqueues a create operation in one transaction.
     func persistDrawingFolderCreate(
         _ folder: DrawingFolder,

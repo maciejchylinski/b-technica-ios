@@ -6,17 +6,19 @@ struct DrawingFolderPullApplyResult: Equatable {
     var upserted: Int
     var removed: Int
     var skippedPending: Int
+    /// Tombstones skipped because the folder still has local children or drawings.
+    var skippedProtected: Int
 }
 
 extension AppDatabase {
     /// Applies remote drawing-folder rows for one project into SQLite.
     ///
     /// - Upserts active remote folders (same UUID / hierarchy).
-    /// - Hard-deletes local rows for remote tombstones (`deleted_at` set).
+    /// - Hard-deletes local rows for remote tombstones only when the folder is empty of
+    ///   local subfolders and drawings (never cascades into drawings/issues/areas).
     /// - Skips any folder id with a pending local outbox operation.
     /// - Never deletes local-only folders merely absent from `remoteFolders`.
     /// - Does not enqueue outbox rows.
-    /// - Does not touch drawings / issues / areas (no FK cascade from folders).
     func applyRemoteDrawingFolderPull(
         projectId: UUID,
         remoteFolders: [RemoteDrawingFolder]
@@ -26,6 +28,7 @@ extension AppDatabase {
             var upserted = 0
             var removed = 0
             var skippedPending = 0
+            var skippedProtected = 0
 
             // Parents before children keeps hierarchy readable; local schema has no parent FK.
             let ordered = remoteFolders.sorted { lhs, rhs in
@@ -47,6 +50,14 @@ extension AppDatabase {
                 }
 
                 if remote.isTombstone {
+                    if try Self.folderHasLocalDependents(
+                        folderId: remote.id,
+                        projectId: projectId,
+                        db: db
+                    ) {
+                        skippedProtected += 1
+                        continue
+                    }
                     try db.execute(
                         sql: """
                         DELETE FROM drawing_folders
@@ -66,7 +77,8 @@ extension AppDatabase {
             return DrawingFolderPullApplyResult(
                 upserted: upserted,
                 removed: removed,
-                skippedPending: skippedPending
+                skippedPending: skippedPending,
+                skippedProtected: skippedProtected
             )
         }
     }
@@ -96,5 +108,32 @@ extension AppDatabase {
             }
         }
         return ids
+    }
+
+    /// True when local subfolders or drawings still reference this folder.
+    private static func folderHasLocalDependents(
+        folderId: UUID,
+        projectId: UUID,
+        db: Database
+    ) throws -> Bool {
+        let childFolders = try Int.fetchOne(
+            db,
+            sql: """
+            SELECT COUNT(*) FROM drawing_folders
+            WHERE project_id = ? AND parent_folder_id = ?
+            """,
+            arguments: [projectId.uuidString, folderId.uuidString]
+        ) ?? 0
+        if childFolders > 0 { return true }
+
+        let drawings = try Int.fetchOne(
+            db,
+            sql: """
+            SELECT COUNT(*) FROM drawings
+            WHERE project_id = ? AND folder_id = ?
+            """,
+            arguments: [projectId.uuidString, folderId.uuidString]
+        ) ?? 0
+        return drawings > 0
     }
 }

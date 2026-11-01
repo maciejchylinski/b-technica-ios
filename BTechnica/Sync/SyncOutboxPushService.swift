@@ -1,5 +1,4 @@
 import Foundation
-import Network
 import os.log
 
 private let syncLog = Logger(
@@ -9,49 +8,36 @@ private let syncLog = Logger(
 
 /// Pushes pending local outbox operations to Supabase.
 /// Drawing-folder create / rename / delete, in FIFO order.
+/// Scheduling / networking are owned by `DrawingFolderSyncCoordinator`.
 @MainActor
 final class SyncOutboxPushService {
     static let shared = SyncOutboxPushService()
 
-    private var inFlight: Task<Void, Never>?
-    private var rescheduleRequested = false
-    private var pathMonitor: NWPathMonitor?
-    private let pathQueue = DispatchQueue(label: "com.btechnica.sync.path")
-    private var lastUserId: UUID?
-    private var lastProjectId: UUID?
-    private var pathSatisfied = true
+    private init() {}
 
-    private init() {
-        startPathMonitor()
-    }
-
-    /// Remembers the active workspace and drains when a connection is available.
+    /// Forwards to the shared folder sync coordinator (push then pull).
     func schedule(userId: UUID, projectId: UUID) {
-        lastUserId = userId
-        lastProjectId = projectId
-        guard pathSatisfied else {
-            syncLog.info("Outbox push deferred — network unavailable")
-            return
-        }
-        enqueuePush(userId: userId, projectId: projectId)
+        DrawingFolderSyncCoordinator.shared.schedule(userId: userId, projectId: projectId)
     }
 
     /// Drains folder create/rename/delete ops for the active project.
+    /// Pass `database` to use an isolated DB (coordinator checks); otherwise the shared user DB.
     func pushPending(
         userId: UUID,
         projectId: UUID,
-        remote: DrawingFolderRemoteStore = SupabaseDrawingFolderRemoteStore()
+        remote: DrawingFolderRemoteStore = SupabaseDrawingFolderRemoteStore(),
+        database: AppDatabase? = nil
     ) async {
-        lastUserId = userId
-        lastProjectId = projectId
-        guard SupabaseManager.isConfigured else { return }
-        guard pathSatisfied else { return }
+        guard SupabaseManager.isConfigured || DrawingFolderSyncCoordinator.shared.isTestBypassConfigured else {
+            return
+        }
 
         do {
-            let db = try AppDatabase.shared(for: userId)
+            let db = try database ?? AppDatabase.shared(for: userId)
             try db.clearOutboxBackoff()
             let entries = try db.fetchOutboxEntries()
             for entry in entries {
+                if Task.isCancelled { return }
                 switch try await process(
                     entry: entry,
                     activeProjectId: projectId,
@@ -136,45 +122,6 @@ final class SyncOutboxPushService {
             )
             return .stopDrain
         }
-    }
-
-    private func enqueuePush(userId: UUID, projectId: UUID) {
-        if inFlight != nil {
-            rescheduleRequested = true
-            return
-        }
-        inFlight = Task { [weak self] in
-            // Brief yield so rapid local mutations coalesce into one drain.
-            try? await Task.sleep(nanoseconds: 150_000_000)
-            await self?.pushPending(userId: userId, projectId: projectId)
-            guard let self else { return }
-            self.inFlight = nil
-            if self.rescheduleRequested,
-               let userId = self.lastUserId,
-               let projectId = self.lastProjectId {
-                self.rescheduleRequested = false
-                self.enqueuePush(userId: userId, projectId: projectId)
-            }
-        }
-    }
-
-    private func startPathMonitor() {
-        let monitor = NWPathMonitor()
-        pathMonitor = monitor
-        monitor.pathUpdateHandler = { [weak self] path in
-            Task { @MainActor in
-                guard let self else { return }
-                let satisfied = path.status == .satisfied
-                let becameAvailable = satisfied && !self.pathSatisfied
-                self.pathSatisfied = satisfied
-                if becameAvailable,
-                   let userId = self.lastUserId,
-                   let projectId = self.lastProjectId {
-                    self.enqueuePush(userId: userId, projectId: projectId)
-                }
-            }
-        }
-        monitor.start(queue: pathQueue)
     }
 
     nonisolated static func folder(from entry: SyncOutboxEntry) throws -> DrawingFolder {

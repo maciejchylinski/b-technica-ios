@@ -1,5 +1,4 @@
 import Foundation
-import Network
 import os.log
 
 private let pullLog = Logger(
@@ -8,111 +7,61 @@ private let pullLog = Logger(
 )
 
 /// Pulls drawing folders from Supabase into local SQLite for the active project.
+/// Scheduling / networking are owned by `DrawingFolderSyncCoordinator`.
 @MainActor
 final class DrawingFolderPullService {
     static let shared = DrawingFolderPullService()
 
-    private var inFlight: Task<Void, Never>?
-    private var rescheduleRequested = false
-    private var pathMonitor: NWPathMonitor?
-    private let pathQueue = DispatchQueue(label: "com.btechnica.folderpull.path")
-    private var lastUserId: UUID?
-    private var lastProjectId: UUID?
-    private var pathSatisfied = true
     private var refreshHandler: (@MainActor () -> Void)?
 
-    private init() {
-        startPathMonitor()
-    }
+    private init() {}
 
-    /// Remembers the active workspace and pulls when a connection is available.
-    /// `onApplied` refreshes in-memory UI after a successful SQLite apply (e.g. AppStore).
+    /// Forwards to the shared folder sync coordinator (push then pull).
     func schedule(
         userId: UUID,
         projectId: UUID,
         onApplied: (@MainActor () -> Void)? = nil
     ) {
-        lastUserId = userId
-        lastProjectId = projectId
-        if let onApplied {
-            refreshHandler = onApplied
-        }
-        guard pathSatisfied else {
-            pullLog.info("Folder pull deferred — network unavailable")
-            return
-        }
-        enqueuePull(userId: userId, projectId: projectId)
+        DrawingFolderSyncCoordinator.shared.schedule(
+            userId: userId,
+            projectId: projectId,
+            onApplied: onApplied
+        )
     }
 
     /// Fetches remote folders for `projectId` and applies them into SQLite.
+    /// Pass `database` to use an isolated DB (coordinator checks); otherwise the shared user DB.
     @discardableResult
     func pull(
         userId: UUID,
         projectId: UUID,
         remote: DrawingFolderRemoteStore = SupabaseDrawingFolderRemoteStore(),
-        onApplied: (@MainActor () -> Void)? = nil
+        onApplied: (@MainActor () -> Void)? = nil,
+        database: AppDatabase? = nil
     ) async -> DrawingFolderPullApplyResult? {
-        lastUserId = userId
-        lastProjectId = projectId
         if let onApplied {
             refreshHandler = onApplied
         }
-        guard SupabaseManager.isConfigured else { return nil }
-        guard pathSatisfied else { return nil }
+        guard SupabaseManager.isConfigured || DrawingFolderSyncCoordinator.shared.isTestBypassConfigured else {
+            return nil
+        }
 
         do {
             let remoteFolders = try await remote.fetchProjectFolders(projectId: projectId)
-            let db = try AppDatabase.shared(for: userId)
+            if Task.isCancelled { return nil }
+            let db = try database ?? AppDatabase.shared(for: userId)
             let result = try db.applyRemoteDrawingFolderPull(
                 projectId: projectId,
                 remoteFolders: remoteFolders
             )
             refreshHandler?()
             pullLog.info(
-                "Folder pull applied upserted=\(result.upserted) removed=\(result.removed) skipped=\(result.skippedPending)"
+                "Folder pull applied upserted=\(result.upserted) removed=\(result.removed) skippedPending=\(result.skippedPending) skippedProtected=\(result.skippedProtected)"
             )
             return result
         } catch {
             pullLog.error("Folder pull failed: \(error.localizedDescription, privacy: .public)")
             return nil
         }
-    }
-
-    private func enqueuePull(userId: UUID, projectId: UUID) {
-        if inFlight != nil {
-            rescheduleRequested = true
-            return
-        }
-        inFlight = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 150_000_000)
-            _ = await self?.pull(userId: userId, projectId: projectId)
-            guard let self else { return }
-            self.inFlight = nil
-            if self.rescheduleRequested,
-               let userId = self.lastUserId,
-               let projectId = self.lastProjectId {
-                self.rescheduleRequested = false
-                self.enqueuePull(userId: userId, projectId: projectId)
-            }
-        }
-    }
-
-    private func startPathMonitor() {
-        let monitor = NWPathMonitor()
-        pathMonitor = monitor
-        monitor.pathUpdateHandler = { [weak self] path in
-            Task { @MainActor in
-                guard let self else { return }
-                let satisfied = path.status == .satisfied
-                let becameAvailable = satisfied && !self.pathSatisfied
-                self.pathSatisfied = satisfied
-                if becameAvailable,
-                   let userId = self.lastUserId,
-                   let projectId = self.lastProjectId {
-                    self.enqueuePull(userId: userId, projectId: projectId)
-                }
-            }
-        }
-        monitor.start(queue: pathQueue)
     }
 }

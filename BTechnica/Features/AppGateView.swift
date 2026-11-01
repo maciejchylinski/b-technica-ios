@@ -24,6 +24,9 @@ struct AppGateView: View {
             }
         }
         .onChange(of: auth.userId) { _, userId in
+            if userId == nil {
+                DrawingFolderSyncCoordinator.shared.cancel()
+            }
             projects.bind(userId: userId)
             if let userId {
                 LocalPersistenceBootstrap.prepareIfNeeded(userId: userId)
@@ -37,14 +40,19 @@ struct AppGateView: View {
             syncWorkspace()
             if open {
                 scheduleFolderSync()
+            } else {
+                DrawingFolderSyncCoordinator.shared.cancel()
             }
         }
         .onChange(of: projects.projects) { _, _ in
             syncWorkspace()
         }
         .onChange(of: auth.phase) { _, phase in
-            if phase == .signedIn {
+            switch phase {
+            case .signedIn:
                 scheduleFolderSync()
+            case .signedOut, .loading:
+                DrawingFolderSyncCoordinator.shared.cancel()
             }
         }
         .onAppear {
@@ -122,12 +130,11 @@ struct AppGateView: View {
               let userId = auth.userId,
               let projectId = projects.selectedProjectId
         else { return }
-        // Pull remote folders first so local UI converges; push drains pending outbox after.
+        // Single coordinator: push pending outbox, then pull (skips pending / protected folders).
         if let store {
-            store.scheduleDrawingFolderPull()
+            store.scheduleDrawingFolderSync()
         } else {
-            DrawingFolderPullService.shared.schedule(userId: userId, projectId: projectId)
+            DrawingFolderSyncCoordinator.shared.schedule(userId: userId, projectId: projectId)
         }
-        SyncOutboxPushService.shared.schedule(userId: userId, projectId: projectId)
     }
 }

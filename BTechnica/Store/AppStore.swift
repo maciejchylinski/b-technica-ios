@@ -236,10 +236,10 @@ final class AppStore: ObservableObject {
         }
     }
 
-    /// Schedules Supabase → SQLite drawing-folder pull for this workspace.
-    func scheduleDrawingFolderPull() {
+    /// Schedules coordinated folder sync (push pending, then pull) for this workspace.
+    func scheduleDrawingFolderSync() {
         guard drawingsUseSQLite else { return }
-        DrawingFolderPullService.shared.schedule(userId: userId, projectId: projectId) { [weak self] in
+        DrawingFolderSyncCoordinator.shared.schedule(userId: userId, projectId: projectId) { [weak self] in
             self?.reloadDrawingFoldersFromSQLite()
         }
     }

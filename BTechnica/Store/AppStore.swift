@@ -399,6 +399,19 @@ final class AppStore: ObservableObject {
             name: trimmed,
             sortOrder: nextOrder
         )
+        if drawingsUseSQLite {
+            guard let database else {
+                storageError = "Local data could not be saved"
+                return nil
+            }
+            do {
+                try database.persistDrawingFolderCreate(created)
+            } catch {
+                print("[AppStore] Folder create outbox failed: \(error)")
+                storageError = "Local data could not be saved"
+                return nil
+            }
+        }
         data.drawingFolders.append(created)
         persist()
         return created
@@ -416,6 +429,21 @@ final class AppStore: ObservableObject {
         if siblingFolderNameExists(trimmed, parentFolderId: parentId, excludingId: id) {
             return "A folder with that name already exists here."
         }
+        var renamed = data.drawingFolders[index]
+        renamed.name = trimmed
+        if drawingsUseSQLite {
+            guard let database else {
+                storageError = "Local data could not be saved"
+                return "Local data could not be saved"
+            }
+            do {
+                try database.persistDrawingFolderRename(renamed)
+            } catch {
+                print("[AppStore] Folder rename outbox failed: \(error)")
+                storageError = "Local data could not be saved"
+                return "Local data could not be saved"
+            }
+        }
         data.drawingFolders[index].name = trimmed
         persist()
         return nil
@@ -424,9 +452,22 @@ final class AppStore: ObservableObject {
     /// Deletes a folder only when it has no child folders and no drawings.
     @discardableResult
     func deleteFolder(id: UUID) -> String? {
-        guard folder(id: id) != nil else { return "Folder not found." }
+        guard let existing = folder(id: id) else { return "Folder not found." }
         guard isFolderEmpty(id) else {
             return "Only empty folders can be deleted. Move or delete drawings and subfolders first."
+        }
+        if drawingsUseSQLite {
+            guard let database else {
+                storageError = "Local data could not be saved"
+                return "Local data could not be saved"
+            }
+            do {
+                try database.persistDrawingFolderDelete(existing)
+            } catch {
+                print("[AppStore] Folder delete outbox failed: \(error)")
+                storageError = "Local data could not be saved"
+                return "Local data could not be saved"
+            }
         }
         data.drawingFolders.removeAll { $0.id == id }
         persist()

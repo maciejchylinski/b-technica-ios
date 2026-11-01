@@ -72,6 +72,22 @@ struct BTechnicaApp: App {
                 fputs("BT_USER_SHARED_SQLITE_VERIFY passed=\(result.passed) msg=\(result.message)\n", stderr)
             }
         }
+        if ProcessInfo.processInfo.arguments.contains("-BTVerifySyncOutbox") {
+            let result = SyncOutboxVerification.run()
+            let payload: [String: Any] = [
+                "passed": result.passed,
+                "message": result.message
+            ]
+            if let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]),
+               let text = String(data: data, encoding: .utf8) {
+                let url = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("bt-sync-outbox-verify.json")
+                try? text.write(to: url, atomically: true, encoding: .utf8)
+                fputs("BT_SYNC_OUTBOX_VERIFY \(text)\n", stderr)
+            } else {
+                fputs("BT_SYNC_OUTBOX_VERIFY passed=\(result.passed) msg=\(result.message)\n", stderr)
+            }
+        }
         #endif
     }
 

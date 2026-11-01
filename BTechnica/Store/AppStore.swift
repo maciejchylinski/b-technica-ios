@@ -223,6 +223,27 @@ final class AppStore: ObservableObject {
         persist()
     }
 
+    /// Reloads drawing folders from SQLite into memory (after a remote pull). Does not enqueue outbox ops.
+    func reloadDrawingFoldersFromSQLite() {
+        guard drawingsUseSQLite, let database else { return }
+        do {
+            let folders = try database.fetchDrawingFolders(projectId: projectId)
+            var next = data
+            next.drawingFolders = folders
+            data = next
+        } catch {
+            storageError = error.localizedDescription
+        }
+    }
+
+    /// Schedules Supabase → SQLite drawing-folder pull for this workspace.
+    func scheduleDrawingFolderPull() {
+        guard drawingsUseSQLite else { return }
+        DrawingFolderPullService.shared.schedule(userId: userId, projectId: projectId) { [weak self] in
+            self?.reloadDrawingFoldersFromSQLite()
+        }
+    }
+
     private static func userRootURL(for userId: UUID, fileManager: FileManager) -> URL {
         fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Users", isDirectory: true)

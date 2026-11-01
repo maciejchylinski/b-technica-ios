@@ -178,6 +178,24 @@ final class FakeDrawingFolderRemote: DrawingFolderRemoteStore, @unchecked Sendab
         try ensureDeletedSync(folder)
     }
 
+    func fetchProjectFolders(projectId: UUID) async throws -> [RemoteDrawingFolder] {
+        rows.values.compactMap { folder -> RemoteDrawingFolder? in
+            guard folder.projectId == projectId else { return nil }
+            return RemoteDrawingFolder(
+                id: folder.id,
+                projectId: folder.projectId,
+                parentFolderId: folder.parentFolderId,
+                name: folder.name,
+                sortOrder: folder.sortOrder,
+                createdAt: folder.createdDate,
+                deletedAt: deletedAt[folder.id]
+            )
+        }
+        .sorted {
+            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
+    }
+
     func ensureCreatedSync(_ folder: DrawingFolder) throws -> DrawingFolderRemoteCreateResult {
         try failIfRequested()
         if let existing = activeRows[folder.id] {

@@ -36,7 +36,7 @@ struct AppGateView: View {
         .onChange(of: projects.isWorkspaceOpen) { _, open in
             syncWorkspace()
             if open {
-                scheduleOutboxPush()
+                scheduleFolderSync()
             }
         }
         .onChange(of: projects.projects) { _, _ in
@@ -44,7 +44,7 @@ struct AppGateView: View {
         }
         .onChange(of: auth.phase) { _, phase in
             if phase == .signedIn {
-                scheduleOutboxPush()
+                scheduleFolderSync()
             }
         }
         .onAppear {
@@ -53,7 +53,7 @@ struct AppGateView: View {
                 LocalPersistenceBootstrap.prepareIfNeeded(userId: userId)
             }
             syncWorkspace()
-            scheduleOutboxPush()
+            scheduleFolderSync()
         }
         .task(id: auth.userId) {
             guard auth.phase == .signedIn else { return }
@@ -65,7 +65,7 @@ struct AppGateView: View {
             }
             await projects.load(reopenWorkspace: true)
             syncWorkspace()
-            scheduleOutboxPush()
+            scheduleFolderSync()
         }
     }
 
@@ -110,18 +110,24 @@ struct AppGateView: View {
                 createdDate: cloud.createdAt
             )
             boundProjectId = projectId
-            scheduleOutboxPush()
+            scheduleFolderSync()
         } else {
             store?.applyCloudProjectName(cloud.name)
         }
     }
 
-    private func scheduleOutboxPush() {
+    private func scheduleFolderSync() {
         guard auth.phase == .signedIn,
               projects.isWorkspaceOpen,
               let userId = auth.userId,
               let projectId = projects.selectedProjectId
         else { return }
+        // Pull remote folders first so local UI converges; push drains pending outbox after.
+        if let store {
+            store.scheduleDrawingFolderPull()
+        } else {
+            DrawingFolderPullService.shared.schedule(userId: userId, projectId: projectId)
+        }
         SyncOutboxPushService.shared.schedule(userId: userId, projectId: projectId)
     }
 }

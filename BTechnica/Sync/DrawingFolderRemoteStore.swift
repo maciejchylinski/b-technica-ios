@@ -21,7 +21,31 @@ enum DrawingFolderRemoteDeleteResult: Equatable {
     case alreadyDeleted
 }
 
-/// Remote API for pushing local drawing-folder mutations.
+/// Remote drawing-folder row as returned by Supabase (includes soft-delete tombstones).
+struct RemoteDrawingFolder: Equatable, Sendable {
+    var id: UUID
+    var projectId: UUID
+    var parentFolderId: UUID?
+    var name: String
+    var sortOrder: Int
+    var createdAt: Date
+    var deletedAt: Date?
+
+    var isTombstone: Bool { deletedAt != nil }
+
+    func asLocalFolder() -> DrawingFolder {
+        DrawingFolder(
+            id: id,
+            projectId: projectId,
+            parentFolderId: parentFolderId,
+            name: name,
+            sortOrder: sortOrder,
+            createdDate: createdAt
+        )
+    }
+}
+
+/// Remote API for pushing/pulling local drawing-folder mutations.
 protocol DrawingFolderRemoteStore: Sendable {
     /// Ensures a folder row exists with the given local UUID.
     /// Must not overwrite an existing conflicting row.
@@ -32,6 +56,9 @@ protocol DrawingFolderRemoteStore: Sendable {
 
     /// Soft-deletes a folder remotely (`deleted_at`). Idempotent if already gone.
     func ensureDeleted(_ folder: DrawingFolder) async throws -> DrawingFolderRemoteDeleteResult
+
+    /// Lists all folders for a project visible to the caller, including tombstones.
+    func fetchProjectFolders(projectId: UUID) async throws -> [RemoteDrawingFolder]
 }
 
 /// Supabase-backed mutations for `public.drawing_folders`.
@@ -82,7 +109,7 @@ struct SupabaseDrawingFolderRemoteStore: DrawingFolderRemoteStore {
                 .eq("id", value: folder.id.uuidString)
                 .eq("project_id", value: folder.projectId.uuidString)
                 .is("deleted_at", value: nil)
-                .select("id,project_id,parent_folder_id,name,sort_order,deleted_at")
+                .select(Self.selectColumns)
                 .execute()
                 .value
             guard let row = updated.first else {
@@ -136,11 +163,26 @@ struct SupabaseDrawingFolderRemoteStore: DrawingFolderRemoteStore {
         return .alreadyDeleted
     }
 
+    func fetchProjectFolders(projectId: UUID) async throws -> [RemoteDrawingFolder] {
+        let rows: [RemoteFolderRow] = try await client
+            .from("drawing_folders")
+            .select(Self.selectColumns)
+            .eq("project_id", value: projectId.uuidString)
+            .order("sort_order", ascending: true)
+            .order("name", ascending: true)
+            .execute()
+            .value
+        return rows.map(\.asRemote)
+    }
+
+    private static let selectColumns =
+        "id,project_id,parent_folder_id,name,sort_order,created_at,deleted_at"
+
     /// Active (non-tombstone) folder only — used by create/rename.
     private func fetchActiveFolder(id: UUID) async throws -> RemoteFolderRow? {
         let rows: [RemoteFolderRow] = try await client
             .from("drawing_folders")
-            .select("id,project_id,parent_folder_id,name,sort_order,deleted_at")
+            .select(Self.selectColumns)
             .eq("id", value: id.uuidString)
             .is("deleted_at", value: nil)
             .limit(1)
@@ -153,7 +195,7 @@ struct SupabaseDrawingFolderRemoteStore: DrawingFolderRemoteStore {
     private func fetchFolder(id: UUID) async throws -> RemoteFolderRow? {
         let rows: [RemoteFolderRow] = try await client
             .from("drawing_folders")
-            .select("id,project_id,parent_folder_id,name,sort_order,deleted_at")
+            .select(Self.selectColumns)
             .eq("id", value: id.uuidString)
             .limit(1)
             .execute()
@@ -263,6 +305,7 @@ private struct RemoteFolderRow: Decodable {
     let parentFolderId: UUID?
     let name: String
     let sortOrder: Int
+    let createdAt: Date?
     let deletedAt: Date?
 
     enum CodingKeys: String, CodingKey {
@@ -271,6 +314,19 @@ private struct RemoteFolderRow: Decodable {
         case parentFolderId = "parent_folder_id"
         case name
         case sortOrder = "sort_order"
+        case createdAt = "created_at"
         case deletedAt = "deleted_at"
+    }
+
+    var asRemote: RemoteDrawingFolder {
+        RemoteDrawingFolder(
+            id: id,
+            projectId: projectId,
+            parentFolderId: parentFolderId,
+            name: name,
+            sortOrder: sortOrder,
+            createdAt: createdAt ?? Date(),
+            deletedAt: deletedAt
+        )
     }
 }

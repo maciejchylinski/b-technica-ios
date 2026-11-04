@@ -69,6 +69,12 @@ struct IssueDetailView: View {
 
                     photosSection(issue)
 
+                    LinkedDocumentationPhotosSection(
+                        userId: store.userId,
+                        projectId: store.projectId,
+                        issueId: issue.id
+                    )
+
                     Section("Classification") {
                         LabeledContent("Discipline", value: nonEmptyLabel(issue.discipline))
                         LabeledContent("Contractor", value: nonEmptyLabel(issue.contractor))

@@ -1,38 +1,22 @@
 import SwiftUI
 
-/// Add or edit equipment identity fields (name, category, identifier, notes).
+/// Add or edit equipment identity fields. Status changes go through issue / return actions.
 struct EquipmentEditor: View {
-    enum Mode: Identifiable {
-        case add
-        case edit(UUID)
+    @ObservedObject var equipment: EquipmentStore
+    /// nil = new item.
+    let itemId: UUID?
 
-        var id: String {
-            switch self {
-            case .add: return "add"
-            case .edit(let id): return id.uuidString
-            }
-        }
-    }
-
-    @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
-
-    let mode: Mode
 
     @State private var name = ""
     @State private var category = ""
     @State private var identifier = ""
+    @State private var serialNumber = ""
     @State private var notes = ""
+    @State private var errorMessage: String?
 
     private var canSave: Bool {
         !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    private var title: String {
-        switch mode {
-        case .add: return "New equipment"
-        case .edit: return "Edit equipment"
-        }
     }
 
     var body: some View {
@@ -46,13 +30,27 @@ struct EquipmentEditor: View {
                 }
 
                 Section {
-                    TextField("Type / category", text: $category)
+                    TextField("Category", text: $category)
                         .textInputAutocapitalization(.words)
-                    TextField("Identifier / serial", text: $identifier)
-                        .textInputAutocapitalization(.never)
+                    if !equipment.categories.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack {
+                                ForEach(equipment.categories, id: \.self) { value in
+                                    Button(value) { category = value }
+                                        .buttonStyle(.bordered)
+                                        .controlSize(.small)
+                                }
+                            }
+                        }
+                    }
+                    TextField("Identifier / asset tag", text: $identifier)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled()
+                    TextField("Serial number (optional)", text: $serialNumber)
+                        .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
                 } footer: {
-                    Text("Optional. Examples: Laser level, SN-1042.")
+                    Text("Examples: Laser level, BT-014, SN 58201-77.")
                 }
 
                 Section {
@@ -61,7 +59,7 @@ struct EquipmentEditor: View {
                         .textInputAutocapitalization(.sentences)
                 }
             }
-            .navigationTitle(title)
+            .navigationTitle(itemId == nil ? "New equipment" : "Edit equipment")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -74,41 +72,38 @@ struct EquipmentEditor: View {
                 }
             }
             .onAppear { load() }
+            .alert("Can't save",
+                   isPresented: Binding(get: { errorMessage != nil },
+                                        set: { if !$0 { errorMessage = nil } })) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage ?? "")
+            }
         }
     }
 
     private func load() {
-        guard case .edit(let id) = mode,
-              let item = store.equipment(id: id) else { return }
+        guard let itemId, let item = equipment.item(id: itemId) else { return }
         name = item.item
         category = item.category ?? ""
         identifier = item.identifier ?? ""
+        serialNumber = item.serialNumber ?? ""
         notes = item.notes ?? ""
     }
 
     private func save() {
-        switch mode {
-        case .add:
-            _ = store.addEquipment(
-                name: name,
-                category: category,
-                identifier: identifier,
-                notes: notes
-            )
-        case .edit(let id):
-            store.updateEquipmentDetails(
-                id: id,
-                name: name,
-                category: category,
-                identifier: identifier,
-                notes: notes
-            )
+        let error: String?
+        if let itemId {
+            error = equipment.update(id: itemId, name: name, category: category, identifier: identifier,
+                                     serialNumber: serialNumber, notes: notes)
+        } else {
+            error = equipment.create(name: name, category: category, identifier: identifier,
+                                     serialNumber: serialNumber, notes: notes)
         }
-        dismiss()
+        if let error {
+            errorMessage = error
+        } else {
+            dismiss()
+        }
     }
-}
-
-#Preview {
-    EquipmentEditor(mode: .add)
-        .environmentObject(AppStore())
 }

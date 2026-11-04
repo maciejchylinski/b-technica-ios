@@ -46,6 +46,31 @@ struct MoreView: View {
                     .accessibilityLabel("Sign Out")
                 }
 
+                Section {
+                    NavigationLink {
+                        ProjectContactsView(userId: store.userId, projectId: store.projectId)
+                    } label: {
+                        Label("Contacts", systemImage: "person.crop.rectangle.stack")
+                    }
+                    .accessibilityIdentifier("projectContactsLink")
+                    NavigationLink {
+                        PhotoGalleryView(userId: store.userId, projectId: store.projectId)
+                    } label: {
+                        Label("Photo documentation", systemImage: "photo.on.rectangle.angled")
+                    }
+                    .accessibilityIdentifier("photoDocumentationLink")
+                    NavigationLink {
+                        EquipmentView(userId: store.userId, projectId: store.projectId)
+                    } label: {
+                        Label("Equipment", systemImage: "shippingbox")
+                    }
+                    .accessibilityIdentifier("equipmentLink")
+                } header: {
+                    Text("Field operations")
+                } footer: {
+                    Text("Local only on this device until synchronization is added. Contacts and equipment are shared across your projects; photos belong to this project.")
+                }
+
                 Section("Tools") {
                     NavigationLink {
                         ReportsView()
@@ -62,15 +87,10 @@ struct MoreView: View {
                     } label: {
                         Label("Disciplines", systemImage: "tag")
                     }
-                    NavigationLink {
-                        EquipmentView()
-                    } label: {
-                        Label("Equipment", systemImage: "shippingbox")
-                    }
                 }
 
                 Section {
-                    Text("Contractors and equipment are shared across your projects on this device.")
+                    Text("Contractors and disciplines are shared across your projects on this device.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

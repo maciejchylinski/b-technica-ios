@@ -16,10 +16,12 @@ enum SyncOutboxOperation: String, Equatable {
     case delete
 }
 
-/// Entity kinds that may appear in the outbox. Folders first; drawings after PDF upload.
+/// Entity kinds that may appear in the outbox. Folders first; drawings after PDF upload;
+/// areas after drawing page mappings exist.
 enum SyncOutboxEntityType: String, Equatable {
     case drawingFolder = "drawing_folder"
     case drawing = "drawing"
+    case area = "area"
 }
 
 /// One durable outbox row. `id` is the stable operation UUID used across retries.
@@ -273,10 +275,74 @@ extension AppDatabase {
         }
     }
 
+    /// Creates/upserts an area and enqueues a create operation in one transaction.
+    /// Idempotent: skips outbox when already marked pushed or a create is pending.
+    func persistAreaCreate(
+        _ area: Area,
+        operationId: UUID = UUID()
+    ) throws {
+        try dbQueue.write { db in
+            try Self.upsertAreas([area], db: db)
+
+            if try Self.syncStateValue(
+                key: Self.areaCreateSyncKey(area.id),
+                db: db
+            ) != nil {
+                return
+            }
+            if try Self.hasOutboxEntry(
+                entityType: .area,
+                entityId: area.id,
+                operation: .create,
+                db: db
+            ) {
+                return
+            }
+
+            try Self.insertOutboxEntry(
+                operationId: operationId,
+                entityType: .area,
+                entityId: area.id,
+                operation: .create,
+                payloadJSON: try Self.areaPayloadJSON(area),
+                db: db
+            )
+        }
+    }
+
+    /// Records that an area create reached Postgres (survives outbox row deletion).
+    func markAreaCreatePushed(areaId: UUID, now: Date = Date()) throws {
+        try dbQueue.write { db in
+            try Self.upsertSyncState(
+                key: Self.areaCreateSyncKey(areaId),
+                value: "1",
+                now: now,
+                db: db
+            )
+        }
+    }
+
+    /// Revision UUID recorded when drawing metadata was pushed/pulled, if any.
+    func syncedDrawingRevisionId(drawingId: UUID) throws -> UUID? {
+        try dbQueue.read { db in
+            guard let raw = try Self.syncStateValue(
+                key: Self.drawingMetadataSyncKey(drawingId),
+                db: db
+            ) else {
+                return nil
+            }
+            return UUID(uuidString: raw)
+        }
+    }
+
     // MARK: - Internals
 
     static func drawingMetadataSyncKey(_ drawingId: UUID) -> String {
         "drawing_metadata_pushed:\(drawingId.uuidString)"
+    }
+
+    static func areaCreateSyncKey(_ areaId: UUID) -> String {
+        "area_create_pushed:\(areaId.uuidString)"
     }
 
     static func revisionId(fromRemotePath path: String) -> UUID? {
@@ -400,6 +466,28 @@ extension AppDatabase {
         } else {
             payload["parentFolderId"] = NSNull()
         }
+        let data = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
+        guard let text = String(data: data, encoding: .utf8) else {
+            throw SyncOutboxStoreError.payloadEncodingFailed
+        }
+        return text
+    }
+
+    static func areaPayloadJSON(_ area: Area) throws -> String {
+        let vertices = area.vertices.map { ["x": $0.x, "y": $0.y] }
+        let payload: [String: Any] = [
+            "id": area.id.uuidString,
+            "projectId": area.projectId.uuidString,
+            "drawingId": area.drawingId.uuidString,
+            "pageIndex": area.pageIndex,
+            "name": area.name,
+            "vertices": vertices,
+            "color": area.color,
+            "opacity": area.opacity,
+            "isVisible": area.isVisible,
+            "createdDate": SQLiteDateCoding.string(from: area.createdDate),
+            "updatedDate": SQLiteDateCoding.string(from: area.updatedDate)
+        ]
         let data = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
         guard let text = String(data: data, encoding: .utf8) else {
             throw SyncOutboxStoreError.payloadEncodingFailed

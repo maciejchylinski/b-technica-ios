@@ -46,6 +46,7 @@ extension AppDatabase {
                         skippedProtected += 1
                         continue
                     }
+                    try Self.deleteDrawingPageMappings(drawingId: remote.id, db: db)
                     try db.execute(
                         sql: """
                         DELETE FROM drawings
@@ -64,6 +65,14 @@ extension AppDatabase {
                     }
                     let drawing = Self.localDrawing(from: remote, revision: revision)
                     try Self.upsertDrawingMetadataPreservingCalibrations(drawing, db: db)
+                    try Self.replaceDrawingPageMappings(
+                        projectId: projectId,
+                        drawingId: remote.id,
+                        revisionId: revision.id,
+                        pages: revision.pages,
+                        now: Date(),
+                        db: db
+                    )
                     try Self.upsertPendingDrawingPDFDownload(
                         drawingId: remote.id,
                         projectId: projectId,

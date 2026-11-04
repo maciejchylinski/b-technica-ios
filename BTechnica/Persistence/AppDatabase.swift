@@ -78,6 +78,10 @@ final class AppDatabase: @unchecked Sendable {
             try Self.createV1Schema(db)
         }
 
+        migrator.registerMigration("v2_drawing_page_mappings") { db in
+            try Self.createDrawingPageMappingsTable(db)
+        }
+
         return migrator
     }
 

@@ -212,6 +212,10 @@ struct EmptyDrawingRemoteStore: DrawingRemoteStore {
         .alreadyPresent
     }
 
+    func fetchRevisionPages(revisionId: UUID) async throws -> [RemoteDrawingPage] {
+        []
+    }
+
     func fetchProjectDrawings(projectId: UUID) async throws -> [RemoteDrawing] {
         []
     }

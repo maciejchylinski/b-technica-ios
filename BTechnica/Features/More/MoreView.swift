@@ -48,6 +48,12 @@ struct MoreView: View {
 
                 Section("Tools") {
                     NavigationLink {
+                        ProjectContactsView(userId: store.userId, projectId: store.projectId)
+                    } label: {
+                        Label("Contacts", systemImage: "person.crop.rectangle.stack")
+                    }
+                    .accessibilityIdentifier("projectContactsLink")
+                    NavigationLink {
                         ReportsView()
                     } label: {
                         Label("Reports", systemImage: "doc.text")

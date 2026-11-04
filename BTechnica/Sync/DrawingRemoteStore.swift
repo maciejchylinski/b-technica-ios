@@ -65,6 +65,9 @@ protocol DrawingRemoteStore: Sendable {
     /// Ensures drawing + current revision + pages exist. Never overwrites conflicting rows.
     func ensureCreated(_ payload: DrawingMetadataPayload) async throws -> DrawingRemoteCreateResult
 
+    /// Active `drawing_pages` for a revision (ordered by page_index). Empty when none exist.
+    func fetchRevisionPages(revisionId: UUID) async throws -> [RemoteDrawingPage]
+
     /// Lists drawings for a project visible to the caller, including tombstones.
     /// Active rows include the current revision and its pages when present.
     func fetchProjectDrawings(projectId: UUID) async throws -> [RemoteDrawing]
@@ -97,6 +100,13 @@ struct SupabaseDrawingRemoteStore: DrawingRemoteStore {
             return .alreadyPresent
         }
         return .created
+    }
+
+    func fetchRevisionPages(revisionId: UUID) async throws -> [RemoteDrawingPage] {
+        let rows = try await fetchActivePages(revisionId: revisionId)
+        return rows.map {
+            RemoteDrawingPage(id: $0.id, revisionId: $0.revisionId, pageIndex: $0.pageIndex)
+        }
     }
 
     func fetchProjectDrawings(projectId: UUID) async throws -> [RemoteDrawing] {

@@ -216,6 +216,38 @@ struct BTechnicaApp: App {
                 fputs("BT_LIVE_DRAWING_PDF_DOWNLOAD_VERIFY passed=\(result.passed) msg=\(result.message)\n", stderr)
             }
         }
+        if ProcessInfo.processInfo.arguments.contains("-BTVerifyDrawingPageMapping") {
+            let result = DrawingPageMappingVerification.run()
+            let payload: [String: Any] = [
+                "passed": result.passed,
+                "message": result.message
+            ]
+            if let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]),
+               let text = String(data: data, encoding: .utf8) {
+                let url = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("bt-drawing-page-mapping-verify.json")
+                try? text.write(to: url, atomically: true, encoding: .utf8)
+                fputs("BT_DRAWING_PAGE_MAPPING_VERIFY \(text)\n", stderr)
+            } else {
+                fputs("BT_DRAWING_PAGE_MAPPING_VERIFY passed=\(result.passed) msg=\(result.message)\n", stderr)
+            }
+        }
+        if ProcessInfo.processInfo.arguments.contains("-BTVerifyLiveAreaCreateSync") {
+            let result = LiveAreaCreateSyncVerification.run()
+            let payload: [String: Any] = [
+                "passed": result.passed,
+                "message": result.message
+            ]
+            if let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]),
+               let text = String(data: data, encoding: .utf8) {
+                let url = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("bt-live-area-create-sync-verify.json")
+                try? text.write(to: url, atomically: true, encoding: .utf8)
+                fputs("BT_LIVE_AREA_CREATE_SYNC_VERIFY \(text)\n", stderr)
+            } else {
+                fputs("BT_LIVE_AREA_CREATE_SYNC_VERIFY passed=\(result.passed) msg=\(result.message)\n", stderr)
+            }
+        }
         #endif
     }
 

@@ -207,4 +207,31 @@ extension AppDatabase {
             t.column("record_counts_json", .text).notNull()
         }
     }
+
+    /// Local cache of remote `drawing_pages.id` keyed by revision UUID + page_index.
+    /// Used later for polygon/issue sync; never synthesizes missing page ids.
+    static func createDrawingPageMappingsTable(_ db: Database) throws {
+        try db.create(table: "drawing_page_mappings") { t in
+            // Remote `drawing_pages.id`
+            t.column("drawing_page_id", .text).primaryKey()
+            t.column("project_id", .text).notNull()
+                .references("projects", onDelete: .cascade)
+            t.column("drawing_id", .text).notNull()
+                .references("drawings", onDelete: .cascade)
+            t.column("revision_id", .text).notNull()
+            t.column("page_index", .integer).notNull()
+            t.column("updated_at", .text).notNull()
+            t.uniqueKey(["revision_id", "page_index"])
+        }
+        try db.create(
+            index: "drawing_page_mappings_drawing_id",
+            on: "drawing_page_mappings",
+            columns: ["drawing_id"]
+        )
+        try db.create(
+            index: "drawing_page_mappings_project_id",
+            on: "drawing_page_mappings",
+            columns: ["project_id"]
+        )
+    }
 }

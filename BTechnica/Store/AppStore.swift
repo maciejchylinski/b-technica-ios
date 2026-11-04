@@ -903,8 +903,24 @@ final class AppStore: ObservableObject {
 
     func addArea(_ area: Area) {
         guard area.vertices.count >= 3 else { return }
+        if issuesAreasUseSQLite {
+            guard let database else {
+                storageError = "Local data could not be saved"
+                return
+            }
+            do {
+                try database.persistAreaCreate(area)
+            } catch {
+                print("[AppStore] Area create outbox failed: \(error)")
+                storageError = "Local data could not be saved"
+                return
+            }
+        }
         data.areas.append(area)
         persist()
+        if issuesAreasUseSQLite {
+            SyncOutboxPushService.shared.schedule(userId: userId, projectId: projectId)
+        }
     }
 
     func updateArea(_ area: Area) {

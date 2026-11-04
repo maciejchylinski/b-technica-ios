@@ -216,6 +216,7 @@ struct BTechnicaApp: App {
                 fputs("BT_LIVE_DRAWING_PDF_DOWNLOAD_VERIFY passed=\(result.passed) msg=\(result.message)\n", stderr)
             }
         }
+        ProjectKnowledgeVerification.runIfRequested()
         #endif
     }
 

@@ -78,6 +78,10 @@ final class AppDatabase: @unchecked Sendable {
             try Self.createV1Schema(db)
         }
 
+        migrator.registerMigration("v3_project_contacts") { db in
+            try Self.createProjectContactsSchema(db)
+        }
+
         return migrator
     }
 

@@ -6,6 +6,7 @@ struct BTechnicaApp: App {
 
     init() {
         #if DEBUG
+        ScheduleVerification.runIfRequested()
         if ProcessInfo.processInfo.arguments.contains("-BTVerifySQLiteImport") {
             let result = JSONImportVerification.run()
             let payload: [String: Any] = [

@@ -28,6 +28,19 @@ struct MoreView: View {
                     .accessibilityIdentifier("switchProjectButton")
                 }
 
+                Section("Planning") {
+                    NavigationLink {
+                        ScheduleHomeView(
+                            userId: store.userId,
+                            project: store.data.project,
+                            contractorNames: store.data.contractors.map(\.name)
+                        )
+                    } label: {
+                        Label("Schedule & Gantt", systemImage: "chart.bar.xaxis")
+                    }
+                    .accessibilityIdentifier("scheduleLink")
+                }
+
                 Section("Account") {
                     if let email = auth.userEmail {
                         LabeledContent("Signed in", value: email)

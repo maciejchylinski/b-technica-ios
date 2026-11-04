@@ -94,6 +94,10 @@ final class AppDatabase: @unchecked Sendable {
             try Self.createProjectPhotosSchema(db)
         }
 
+        migrator.registerMigration("v4_construction_schedule") { db in
+            try Self.createConstructionScheduleSchema(db)
+        }
+
         return migrator
     }
 

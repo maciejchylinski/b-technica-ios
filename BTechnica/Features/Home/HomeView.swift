@@ -58,6 +58,16 @@ struct HomeView: View {
                     } label: {
                         shortcutRow(icon: "doc.text", title: "Issue report")
                     }
+                    NavigationLink {
+                        ScheduleHomeView(
+                            userId: store.userId,
+                            project: store.data.project,
+                            contractorNames: store.data.contractors.map(\.name)
+                        )
+                    } label: {
+                        shortcutRow(icon: "chart.bar.xaxis", title: "Schedule")
+                    }
+                    .accessibilityIdentifier("homeScheduleShortcut")
                 }
 
                 Section("Overview") {

@@ -23,6 +23,7 @@ struct BTechnicaApp: App {
                 fputs("BT_FIELD_OPERATIONS_VERIFY passed=\(result.passed) msg=\(result.message)\n", stderr)
             }
         }
+        ScheduleVerification.runIfRequested()
         if ProcessInfo.processInfo.arguments.contains("-BTVerifySQLiteImport") {
             let result = JSONImportVerification.run()
             let payload: [String: Any] = [

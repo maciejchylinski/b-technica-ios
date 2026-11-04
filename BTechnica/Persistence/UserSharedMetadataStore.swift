@@ -41,7 +41,7 @@ extension AppDatabase {
             let itemRows = try Row.fetchAll(
                 db,
                 sql: """
-                SELECT id, item, category, identifier, notes, issued_to, location,
+                SELECT id, item, category, identifier, serial_number, notes, issued_to, location,
                        issued_at, returned_at, status
                 FROM equipment_items
                 WHERE owner_id = ?
@@ -60,18 +60,19 @@ extension AppDatabase {
         }
     }
 
-    /// Atomically persists user-global dictionaries and equipment (incl. history).
+    /// Atomically persists user-global dictionaries and, when `equipment` is non-nil,
+    /// replaces equipment (incl. history). Pass nil to leave equipment untouched; the app
+    /// writes equipment through the targeted checkout API in `EquipmentMetadataStore`.
     /// Preserves UUIDs; scoped to this database's `userId` as `owner_id`.
     func persistUserShared(
         contractors: [Contractor],
         disciplines: [Discipline],
-        equipment: [EquipmentItem]
+        equipment: [EquipmentItem]?
     ) throws {
         try dbQueue.write { db in
             let owner = userId.uuidString
             let keepContractorIds = Set(contractors.map(\.id.uuidString))
             let keepDisciplineIds = Set(disciplines.map(\.id.uuidString))
-            let keepEquipmentIds = Set(equipment.map(\.id.uuidString))
 
             for c in contractors {
                 try db.execute(
@@ -113,7 +114,7 @@ extension AppDatabase {
                 )
             }
 
-            for item in equipment {
+            for item in equipment ?? [] {
                 try db.execute(
                     sql: """
                     INSERT INTO equipment_items
@@ -185,13 +186,16 @@ extension AppDatabase {
             }
 
             // Orphans: equipment first (events cascade), then dictionaries.
-            let existingEquipment = try String.fetchAll(
-                db,
-                sql: "SELECT id FROM equipment_items WHERE owner_id = ?",
-                arguments: [owner]
-            )
-            for id in existingEquipment where !keepEquipmentIds.contains(id) {
-                try db.execute(sql: "DELETE FROM equipment_items WHERE id = ?", arguments: [id])
+            if let equipment {
+                let keepEquipmentIds = Set(equipment.map(\.id.uuidString))
+                let existingEquipment = try String.fetchAll(
+                    db,
+                    sql: "SELECT id FROM equipment_items WHERE owner_id = ?",
+                    arguments: [owner]
+                )
+                for id in existingEquipment where !keepEquipmentIds.contains(id) {
+                    try db.execute(sql: "DELETE FROM equipment_items WHERE id = ?", arguments: [id])
+                }
             }
 
             let existingContractors = try String.fetchAll(
@@ -241,7 +245,7 @@ extension AppDatabase {
         )
     }
 
-    private static func equipmentItem(from row: Row) throws -> EquipmentItem {
+    static func equipmentItem(from row: Row) throws -> EquipmentItem {
         guard let id = UUID(uuidString: row["id"]) else {
             throw UserSharedMetadataStoreError.invalidRow("equipment_items")
         }
@@ -253,6 +257,7 @@ extension AppDatabase {
             item: row["item"],
             category: row["category"],
             identifier: row["identifier"],
+            serialNumber: row["serial_number"],
             notes: row["notes"],
             issuedTo: row["issued_to"],
             location: row["location"],
@@ -263,11 +268,11 @@ extension AppDatabase {
         )
     }
 
-    private static func fetchEquipmentEvents(equipmentId: UUID, db: Database) throws -> [EquipmentEvent] {
+    static func fetchEquipmentEvents(equipmentId: UUID, db: Database) throws -> [EquipmentEvent] {
         let rows = try Row.fetchAll(
             db,
             sql: """
-            SELECT id, event_at, event_type, person, location, notes
+            SELECT id, event_at, event_type, person, location, notes, checkout_id, project_id
             FROM equipment_events
             WHERE equipment_id = ?
             ORDER BY event_at ASC, id ASC
@@ -280,13 +285,17 @@ extension AppDatabase {
             }
             let typeRaw: String = row["event_type"]
             let atRaw: String = row["event_at"]
+            let checkoutRaw: String? = row["checkout_id"]
+            let projectRaw: String? = row["project_id"]
             return EquipmentEvent(
                 id: id,
                 date: SQLiteDateCoding.date(from: atRaw) ?? Date(),
                 type: EquipmentEventType(rawValue: typeRaw) ?? .edited,
                 person: row["person"],
                 location: row["location"],
-                notes: row["notes"]
+                notes: row["notes"],
+                checkoutId: checkoutRaw.flatMap(UUID.init(uuidString:)),
+                projectId: projectRaw.flatMap(UUID.init(uuidString:))
             )
         }
     }

@@ -1,6 +1,7 @@
 import Foundation
 
 /// Status of a tracked equipment / inventory item.
+/// `returned` is legacy: returning is recorded as an event and leaves the item `available`.
 enum EquipmentStatus: String, Codable, CaseIterable, Identifiable {
     case available
     case issued
@@ -14,11 +15,14 @@ enum EquipmentStatus: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .available: return "Available"
         case .issued: return "Issued"
-        case .returned: return "Returned"
+        case .returned: return "Available"
         case .damaged: return "Damaged"
         case .lost: return "Lost"
         }
     }
+
+    /// Statuses a user can be in after the checkout model normalization.
+    static let current: [EquipmentStatus] = [.available, .issued, .damaged, .lost]
 }
 
 /// A single history entry for an equipment item.
@@ -28,6 +32,8 @@ enum EquipmentEventType: String, Codable, CaseIterable, Identifiable {
     case returned
     case markedDamaged
     case markedLost
+    case markedAvailable
+    case handedOver
     case edited
 
     var id: String { rawValue }
@@ -39,6 +45,8 @@ enum EquipmentEventType: String, Codable, CaseIterable, Identifiable {
         case .returned: return "Returned"
         case .markedDamaged: return "Marked damaged"
         case .markedLost: return "Marked lost"
+        case .markedAvailable: return "Back in service"
+        case .handedOver: return "Handed over"
         case .edited: return "Edited"
         }
     }
@@ -52,19 +60,27 @@ struct EquipmentEvent: Codable, Identifiable, Equatable {
     var person: String?
     var location: String?
     var notes: String?
+    /// Checkout this event opened or closed (nil for create/edit and legacy events).
+    var checkoutId: UUID?
+    /// Project the item was issued in when the event happened.
+    var projectId: UUID?
 
     init(id: UUID = UUID(),
          date: Date = Date(),
          type: EquipmentEventType,
          person: String? = nil,
          location: String? = nil,
-         notes: String? = nil) {
+         notes: String? = nil,
+         checkoutId: UUID? = nil,
+         projectId: UUID? = nil) {
         self.id = id
         self.date = date
         self.type = type
         self.person = Self.nonEmpty(person)
         self.location = Self.nonEmpty(location)
         self.notes = Self.nonEmpty(notes)
+        self.checkoutId = checkoutId
+        self.projectId = projectId
     }
 
     static func nonEmpty(_ value: String?) -> String? {
@@ -80,8 +96,10 @@ struct EquipmentItem: Codable, Identifiable, Equatable {
     var item: String
     /// Optional type / category (e.g. Tool, Meter, PPE).
     var category: String?
-    /// Optional identifier / serial number.
+    /// Optional inventory identifier / asset tag.
     var identifier: String?
+    /// Optional manufacturer serial number.
+    var serialNumber: String?
     var notes: String?
     var issuedTo: String?
     var location: String?
@@ -94,6 +112,7 @@ struct EquipmentItem: Codable, Identifiable, Equatable {
          item: String,
          category: String? = nil,
          identifier: String? = nil,
+         serialNumber: String? = nil,
          notes: String? = nil,
          issuedTo: String? = nil,
          location: String? = nil,
@@ -105,6 +124,7 @@ struct EquipmentItem: Codable, Identifiable, Equatable {
         self.item = item
         self.category = Self.nonEmpty(category)
         self.identifier = Self.nonEmpty(identifier)
+        self.serialNumber = Self.nonEmpty(serialNumber)
         self.notes = Self.nonEmpty(notes)
         self.issuedTo = Self.nonEmpty(issuedTo)
         self.location = Self.nonEmpty(location)
@@ -118,6 +138,7 @@ struct EquipmentItem: Codable, Identifiable, Equatable {
 
     var displayCategory: String? { Self.nonEmpty(category) }
     var displayIdentifier: String? { Self.nonEmpty(identifier) }
+    var displaySerialNumber: String? { Self.nonEmpty(serialNumber) }
     var displayNotes: String? { Self.nonEmpty(notes) }
     var displayIssuedTo: String? { Self.nonEmpty(issuedTo) }
     var displayLocation: String? { Self.nonEmpty(location) }
@@ -125,6 +146,11 @@ struct EquipmentItem: Codable, Identifiable, Equatable {
     /// Whether the item can be handed out (available or back from a prior return).
     var canIssue: Bool {
         status == .available || status == .returned
+    }
+
+    /// Damaged / lost items can be put back into service.
+    var canRestore: Bool {
+        status == .damaged || status == .lost
     }
 
     var canReturn: Bool {
@@ -139,7 +165,7 @@ struct EquipmentItem: Codable, Identifiable, Equatable {
     // MARK: - Codable (new keys optional for older appdata.json)
 
     private enum CodingKeys: String, CodingKey {
-        case id, item, category, identifier, notes
+        case id, item, category, identifier, serialNumber, notes
         case issuedTo, location, issuedDate, returnedDate, status, history
     }
 
@@ -149,6 +175,7 @@ struct EquipmentItem: Codable, Identifiable, Equatable {
         item = try c.decode(String.self, forKey: .item)
         category = try c.decodeIfPresent(String.self, forKey: .category)
         identifier = try c.decodeIfPresent(String.self, forKey: .identifier)
+        serialNumber = try c.decodeIfPresent(String.self, forKey: .serialNumber)
         notes = try c.decodeIfPresent(String.self, forKey: .notes)
         issuedTo = try c.decodeIfPresent(String.self, forKey: .issuedTo)
         location = try c.decodeIfPresent(String.self, forKey: .location)
@@ -164,6 +191,7 @@ struct EquipmentItem: Codable, Identifiable, Equatable {
         try c.encode(item, forKey: .item)
         try c.encodeIfPresent(Self.nonEmpty(category), forKey: .category)
         try c.encodeIfPresent(Self.nonEmpty(identifier), forKey: .identifier)
+        try c.encodeIfPresent(Self.nonEmpty(serialNumber), forKey: .serialNumber)
         try c.encodeIfPresent(Self.nonEmpty(notes), forKey: .notes)
         try c.encodeIfPresent(Self.nonEmpty(issuedTo), forKey: .issuedTo)
         try c.encodeIfPresent(Self.nonEmpty(location), forKey: .location)

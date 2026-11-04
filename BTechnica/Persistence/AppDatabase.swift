@@ -82,6 +82,18 @@ final class AppDatabase: @unchecked Sendable {
             try Self.createDrawingPageMappingsTable(db)
         }
 
+        migrator.registerMigration("v3_project_contacts") { db in
+            try Self.createProjectContactsSchema(db)
+        }
+
+        migrator.registerMigration("v4_equipment_checkouts") { db in
+            try Self.createEquipmentCheckoutsSchema(db)
+        }
+
+        migrator.registerMigration("v5_project_photos") { db in
+            try Self.createProjectPhotosSchema(db)
+        }
+
         return migrator
     }
 

@@ -6,6 +6,23 @@ struct BTechnicaApp: App {
 
     init() {
         #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-BTVerifyFieldOperations") {
+            let result = FieldOperationsVerification.run()
+            let payload: [String: Any] = [
+                "passed": result.passed,
+                "message": result.message,
+                "checks": result.checks
+            ]
+            if let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]),
+               let text = String(data: data, encoding: .utf8) {
+                let url = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("bt-field-operations-verify.json")
+                try? text.write(to: url, atomically: true, encoding: .utf8)
+                fputs("BT_FIELD_OPERATIONS_VERIFY \(text)\n", stderr)
+            } else {
+                fputs("BT_FIELD_OPERATIONS_VERIFY passed=\(result.passed) msg=\(result.message)\n", stderr)
+            }
+        }
         if ProcessInfo.processInfo.arguments.contains("-BTVerifySQLiteImport") {
             let result = JSONImportVerification.run()
             let payload: [String: Any] = [

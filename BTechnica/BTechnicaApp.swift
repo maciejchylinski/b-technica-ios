@@ -266,6 +266,7 @@ struct BTechnicaApp: App {
                 fputs("BT_LIVE_AREA_CREATE_SYNC_VERIFY passed=\(result.passed) msg=\(result.message)\n", stderr)
             }
         }
+        ProjectKnowledgeVerification.runIfRequested()
         #endif
     }
 

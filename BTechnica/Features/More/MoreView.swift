@@ -86,6 +86,12 @@ struct MoreView: View {
 
                 Section("Tools") {
                     NavigationLink {
+                        ProjectDocumentsEntryView()
+                    } label: {
+                        Label("Project Documents", systemImage: "books.vertical")
+                    }
+                    .accessibilityIdentifier("projectDocumentsLink")
+                    NavigationLink {
                         ReportsView()
                     } label: {
                         Label("Reports", systemImage: "doc.text")

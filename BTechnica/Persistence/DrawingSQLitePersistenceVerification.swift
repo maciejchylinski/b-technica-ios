@@ -1,3 +1,5 @@
+// Debug-only verification harness (launch-argument driven from BTechnicaApp).
+#if DEBUG
 import Foundation
 import GRDB
 
@@ -105,3 +107,4 @@ enum DrawingSQLitePersistenceVerification {
         )
     }
 }
+#endif

@@ -1,3 +1,5 @@
+// Debug-only verification harness (launch-argument driven from BTechnicaApp).
+#if DEBUG
 import Foundation
 
 /// Local (fake-remote) check for folder create/rename/delete outbox drain + idempotency.
@@ -273,3 +275,4 @@ final class FakeDrawingFolderRemote: DrawingFolderRemoteStore, @unchecked Sendab
         }
     }
 }
+#endif

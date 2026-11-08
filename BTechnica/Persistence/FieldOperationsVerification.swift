@@ -1,3 +1,5 @@
+// Debug-only verification harness (launch-argument driven from BTechnicaApp).
+#if DEBUG
 import Foundation
 import GRDB
 import ImageIO
@@ -285,3 +287,4 @@ enum FieldOperationsVerification {
                   "missing image file loads as nil", &log)
     }
 }
+#endif

@@ -42,6 +42,13 @@ final class AppStore: ObservableObject {
     private var issuesAreasUseSQLite = false
     /// When true, JSON contractors / equipment / disciplines are recovery-only.
     private var userSharedUseSQLite = false
+    /// Entity state last loaded from or successfully written to SQLite. `persist()` writes
+    /// only the difference against it instead of re-upserting the whole project graph.
+    /// `nil` falls back to the full-graph write.
+    private var sqliteBaseline: SQLiteWorkspaceBaseline?
+    /// Project identity last written to the residual JSON files while every entity array
+    /// there is frozen; an unchanged key means the JSON rewrite would be byte-identical.
+    private var lastFrozenJSONKey: FrozenJSONKey?
 
     /// Documents/Users/<userId>/Projects/<projectId>/appdata.json
     private var storeURL: URL {
@@ -212,6 +219,19 @@ final class AppStore: ObservableObject {
         self.drawingsUseSQLite = useSQLiteDrawings
         self.issuesAreasUseSQLite = useSQLiteIssuesAreas
         self.userSharedUseSQLite = useSQLiteUserShared
+        if useSQLiteDrawings && useSQLiteIssuesAreas && useSQLiteUserShared {
+            // Exactly what SQLite holds now (before issue-number normalization), so the
+            // first save writes only the normalized rows.
+            self.sqliteBaseline = SQLiteWorkspaceBaseline(
+                projectName: projectLocal.project.name,
+                folders: sqliteFolders,
+                drawings: sqliteDrawings,
+                areas: sqliteAreas,
+                issues: sqliteIssues,
+                contractors: sqliteContractors,
+                disciplines: sqliteDisciplines
+            )
+        }
 
         if needsRewrite {
             // Write back schema / identity fixes so the next launch is clean.
@@ -235,6 +255,7 @@ final class AppStore: ObservableObject {
             var next = data
             next.drawingFolders = folders
             data = next
+            sqliteBaseline?.folders = SQLiteWorkspaceBaseline.index(folders)
         } catch {
             storageError = error.localizedDescription
         }
@@ -251,6 +272,8 @@ final class AppStore: ObservableObject {
             next.drawingFolders = folders
             next.drawings = drawings
             data = next
+            sqliteBaseline?.folders = SQLiteWorkspaceBaseline.index(folders)
+            sqliteBaseline?.drawings = SQLiteWorkspaceBaseline.index(drawings)
         } catch {
             storageError = error.localizedDescription
         }
@@ -1149,7 +1172,14 @@ final class AppStore: ObservableObject {
                     )
                 }
                 // Single transaction so drawing UPSERTs never CASCADE-wipe issues/areas.
-                if drawingsUseSQLite && issuesAreasUseSQLite {
+                if drawingsUseSQLite && issuesAreasUseSQLite, let baseline = sqliteBaseline {
+                    // Only what changed since the last successful save (full graph was
+                    // O(project size) rows on the main actor for every edit).
+                    let delta = baseline.delta(to: data)
+                    if !delta.isEmpty || baseline.projectName != data.project.name {
+                        try database.persistProjectWorkspaceDelta(project: data.project, delta: delta)
+                    }
+                } else if drawingsUseSQLite && issuesAreasUseSQLite {
                     try database.persistProjectWorkspace(
                         project: data.project,
                         folders: data.drawingFolders,
@@ -1171,7 +1201,10 @@ final class AppStore: ObservableObject {
                     )
                 }
 
-                if userSharedUseSQLite {
+                if userSharedUseSQLite,
+                   sqliteBaseline == nil
+                    || sqliteBaseline?.contractors != data.contractors
+                    || sqliteBaseline?.disciplines != data.disciplines {
                     // Equipment is written only through EquipmentStore's transactional API.
                     try database.persistUserShared(
                         contractors: data.contractors,
@@ -1179,6 +1212,22 @@ final class AppStore: ObservableObject {
                         equipment: nil
                     )
                 }
+                if sqliteBaseline != nil {
+                    sqliteBaseline = SQLiteWorkspaceBaseline(data: data)
+                }
+            }
+
+            // With every entity array frozen, the JSON files only depend on project identity
+            // and schema version; skip the decode → encode → copy → write cycle when unchanged.
+            let jsonFullyFrozen = drawingsUseSQLite && issuesAreasUseSQLite && userSharedUseSQLite
+            let jsonKey = FrozenJSONKey(project: data.project, schemaVersion: data.schemaVersion)
+            if jsonFullyFrozen, !storeFileUntrusted, lastFrozenJSONKey == jsonKey {
+                if clearingLoadError {
+                    storageError = nil
+                } else if storageError == "Local data could not be saved" {
+                    storageError = nil
+                }
+                return
             }
 
             if !storeFileUntrusted, fileManager.fileExists(atPath: storeURL.path) {
@@ -1220,6 +1269,7 @@ final class AppStore: ObservableObject {
             try encoder.encode(projectLocal).write(to: storeURL, options: [.atomic])
             try encoder.encode(shared).write(to: userSharedURL, options: [.atomic])
             storeFileUntrusted = false
+            lastFrozenJSONKey = jsonFullyFrozen ? jsonKey : nil
 
             if clearingLoadError {
                 storageError = nil
@@ -1354,4 +1404,101 @@ final class AppStore: ObservableObject {
             return nil
         }
     }
+}
+
+/// Snapshot of what `AppStore` last read from or wrote to SQLite, keyed by id.
+/// Internal (not private) so the DEBUG `WorkspaceDeltaPersistenceVerification` can drive it.
+struct SQLiteWorkspaceBaseline {
+    var projectName: String
+    var folders: [UUID: DrawingFolder]
+    var drawings: [UUID: Drawing]
+    var areas: [UUID: Area]
+    var issues: [UUID: Issue]
+    var contractors: [Contractor]
+    var disciplines: [Discipline]
+
+    init(
+        projectName: String,
+        folders: [DrawingFolder],
+        drawings: [Drawing],
+        areas: [Area],
+        issues: [Issue],
+        contractors: [Contractor],
+        disciplines: [Discipline]
+    ) {
+        self.projectName = projectName
+        self.folders = Self.index(folders)
+        self.drawings = Self.index(drawings)
+        self.areas = Self.index(areas)
+        self.issues = Self.index(issues)
+        self.contractors = contractors
+        self.disciplines = disciplines
+    }
+
+    init(data: AppData) {
+        self.init(
+            projectName: data.project.name,
+            folders: data.drawingFolders,
+            drawings: data.drawings,
+            areas: data.areas,
+            issues: data.issues,
+            contractors: data.contractors,
+            disciplines: data.disciplines
+        )
+    }
+
+    /// Last value wins for duplicate ids (same as the sequential UPSERTs it replaces).
+    static func index<T: Identifiable>(_ items: [T]) -> [UUID: T] where T.ID == UUID {
+        Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
+    }
+
+    /// Rows to upsert (new or changed) and ids to delete (present before, gone now).
+    func delta(to data: AppData) -> ProjectWorkspaceDelta {
+        var result = ProjectWorkspaceDelta()
+        (result.upsertFolders, result.deletedFolderIds) = Self.diff(data.drawingFolders, against: folders)
+        (result.upsertDrawings, result.deletedDrawingIds) = Self.diff(data.drawings, against: drawings)
+        (result.upsertAreas, result.deletedAreaIds) = Self.diff(data.areas, against: areas)
+        (result.upsertIssues, result.deletedIssueIds) = Self.diff(data.issues, against: issues)
+
+        // Parent drawings of changed issues/areas, passed separately so the writer can insert
+        // one only when its row is missing (a pull removed it while memory was not reloaded;
+        // without the parent the child FK fails, the baseline never advances and every later
+        // save fails). They are never used to overwrite an existing row: that would revert
+        // newer pulled metadata / folder links from a stale in-memory copy.
+        let parentIds = Set(result.upsertIssues.map(\.drawingId)).union(result.upsertAreas.map(\.drawingId))
+        if !parentIds.isEmpty {
+            let alreadyUpserted = Set(result.upsertDrawings.map(\.id))
+            let deleted = Set(result.deletedDrawingIds)
+            for drawing in data.drawings
+            where parentIds.contains(drawing.id)
+                && !alreadyUpserted.contains(drawing.id)
+                && !deleted.contains(drawing.id) {
+                result.ensureParentDrawings.append(drawing)
+            }
+        }
+        return result
+    }
+
+    private static func diff<T: Identifiable & Equatable>(
+        _ current: [T],
+        against previous: [UUID: T]
+    ) -> (changed: [T], removed: [UUID]) where T.ID == UUID {
+        var changed: [T] = []
+        var seen = Set<UUID>()
+        seen.reserveCapacity(current.count)
+        for item in current {
+            seen.insert(item.id)
+            if previous[item.id] != item {
+                changed.append(item)
+            }
+        }
+        let removed = previous.keys.filter { !seen.contains($0) }
+        return (changed, removed)
+    }
+}
+
+/// Inputs that still vary in the residual JSON files once all entity arrays are frozen.
+private struct FrozenJSONKey: Equatable {
+    var project: Project
+    var schemaVersion: Int
 }

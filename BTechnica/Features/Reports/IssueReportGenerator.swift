@@ -25,9 +25,14 @@ enum IssueReportGenerator {
         var discipline: String?
         var pageNumber: Int
         var drawingPageCount: Int
-        /// Loaded images only; missing files should already be filtered out.
-        var photos: [UIImage]
+        /// Photo files on disk; missing files should already be filtered out. Decoded one at
+        /// a time while drawing (downsampled), so a large report never holds every bitmap.
+        var photos: [URL]
     }
+
+    /// Longest side of a report photo. The two-column cell is ~250 pt wide, so 1200 px is
+    /// ~340 dpi; full-resolution camera JPEGs only inflated memory and the PDF size.
+    static let photoMaxPixelSize = 1200
 
     enum ReportError: LocalizedError {
         case writeFailed
@@ -200,7 +205,7 @@ enum IssueReportGenerator {
         return y
     }
 
-    private static func drawPhotos(_ photos: [UIImage],
+    private static func drawPhotos(_ photos: [URL],
                                    at startY: CGFloat,
                                    context: UIGraphicsPDFRendererContext,
                                    input: Input) -> CGFloat {
@@ -224,8 +229,12 @@ enum IssueReportGenerator {
             UIColor.secondarySystemFill.setFill()
             UIBezierPath(roundedRect: rect, cornerRadius: 4).fill()
 
-            let fitted = aspectFitRect(for: photo.size, in: rect.insetBy(dx: 2, dy: 2))
-            photo.draw(in: fitted)
+            autoreleasepool {
+                if let image = PhotoImageProcessing.downsampledImage(at: photo, maxPixelSize: photoMaxPixelSize) {
+                    let fitted = aspectFitRect(for: image.size, in: rect.insetBy(dx: 2, dy: 2))
+                    image.draw(in: fitted)
+                }
+            }
 
             column += 1
             if column >= columns {

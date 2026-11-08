@@ -12,6 +12,11 @@ private let downloadLog = Logger(
 final class DrawingPDFDownloadService {
     static let shared = DrawingPDFDownloadService()
 
+    /// Transfers being downloaded right now. The on-demand path (`download`) and the
+    /// background drain (`pullPending`) share this service; without it both could stream
+    /// the same PDF at once (main-actor isolated, so check-and-insert is atomic).
+    private var activeTransferIds: Set<UUID> = []
+
     private init() {}
 
     /// Downloads one drawing's PDF (on-demand). Returns true when the local file is present
@@ -25,7 +30,7 @@ final class DrawingPDFDownloadService {
         database: AppDatabase? = nil,
         userRootURL: URL? = nil
     ) async -> Bool {
-        guard SupabaseManager.isConfigured || DrawingPDFDownloadCoordinator.shared.isTestBypassConfigured else {
+        guard !LocalOnlyWorkspace.isLocalOnly(userId: userId), SupabaseManager.isConfigured || DrawingPDFDownloadCoordinator.shared.isTestBypassConfigured else {
             return false
         }
 
@@ -39,6 +44,12 @@ final class DrawingPDFDownloadService {
                 return false
             }
             let localURL = root.appendingPathComponent(transfer.localRelativePath)
+            // Background drain is already streaming this PDF: wait for it instead of
+            // starting a second download, then reuse its result below.
+            while activeTransferIds.contains(transfer.id) {
+                try? await Task.sleep(nanoseconds: 250_000_000)
+                if Task.isCancelled { return false }
+            }
             if FileManager.default.fileExists(atPath: localURL.path) {
                 if transfer.status != .completed {
                     let bytes = (try? FileManager.default.attributesOfItem(atPath: localURL.path)[.size] as? NSNumber)?
@@ -70,7 +81,7 @@ final class DrawingPDFDownloadService {
         database: AppDatabase? = nil,
         userRootURL: URL? = nil
     ) async {
-        guard SupabaseManager.isConfigured || DrawingPDFDownloadCoordinator.shared.isTestBypassConfigured else {
+        guard !LocalOnlyWorkspace.isLocalOnly(userId: userId), SupabaseManager.isConfigured || DrawingPDFDownloadCoordinator.shared.isTestBypassConfigured else {
             return
         }
 
@@ -132,6 +143,10 @@ final class DrawingPDFDownloadService {
         }
 
         let localURL = userRootURL.appendingPathComponent(transfer.localRelativePath)
+
+        // Another caller owns this transfer (on-demand vs. drain); skip, do not duplicate.
+        guard activeTransferIds.insert(transfer.id).inserted else { return .continueDrain }
+        defer { activeTransferIds.remove(transfer.id) }
 
         do {
             if Task.isCancelled { return .stopDrain }

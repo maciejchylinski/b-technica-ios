@@ -71,6 +71,19 @@ struct LoginView: View {
                     .disabled(auth.isBusy || email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.isEmpty)
                     .accessibilityIdentifier("loginSignInButton")
                 }
+
+                #if DEBUG
+                Section {
+                    Button {
+                        DemoModeController.shared.enter()
+                    } label: {
+                        Label("Open demo projects", systemImage: "theatermasks")
+                    }
+                    .accessibilityIdentifier("openDemoButton")
+                } footer: {
+                    Text("DEBUG only: fictional local data, no sign-in and no Supabase sync.")
+                }
+                #endif
             }
             .scrollDismissesKeyboard(.interactively)
             .navigationBarTitleDisplayMode(.inline)

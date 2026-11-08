@@ -108,6 +108,19 @@ struct ProjectsView: View {
             } footer: {
                 Text("Each project keeps its own local drawings, issues, and photos on this device. Cloud sync is not enabled yet.")
             }
+
+            #if DEBUG
+            Section {
+                Button {
+                    DemoModeController.shared.enter()
+                } label: {
+                    Label("Open demo projects", systemImage: "theatermasks")
+                }
+                .accessibilityIdentifier("openDemoFromProjectsButton")
+            } footer: {
+                Text("DEBUG only: separate local demo workspace with fictional data. Your projects are not affected.")
+            }
+            #endif
         }
     }
 
@@ -123,6 +136,12 @@ struct ProjectsView: View {
             }
             .buttonStyle(.borderedProminent)
             .accessibilityIdentifier("createProjectEmptyButton")
+            #if DEBUG
+            Button("Open demo projects") {
+                DemoModeController.shared.enter()
+            }
+            .accessibilityIdentifier("openDemoFromEmptyProjectsButton")
+            #endif
         }
         .accessibilityIdentifier("projectsEmptyState")
     }

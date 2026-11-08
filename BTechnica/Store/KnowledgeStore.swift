@@ -39,6 +39,16 @@ final class KnowledgeStore: ObservableObject {
         return store
     }
 
+    #if DEBUG
+    /// Demo reset: drops the cached store for `userId` (and stops its indexing) so the
+    /// re-seeded library is loaded from SQLite the next time Project Documents opens.
+    static func discardCachedStore(userId: UUID) {
+        guard let cached = current, cached.userId == userId else { return }
+        cached.indexingTask?.cancel()
+        current = nil
+    }
+    #endif
+
     private init(userId: UUID, project: Project) {
         self.userId = userId
         self.projectId = project.id

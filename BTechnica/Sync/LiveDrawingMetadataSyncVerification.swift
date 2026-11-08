@@ -1,3 +1,5 @@
+// Debug-only verification harness (launch-argument driven from BTechnicaApp).
+#if DEBUG
 import Foundation
 import PDFKit
 import Supabase
@@ -360,3 +362,4 @@ private struct LivePageProbe: Decodable {
         case deletedAt = "deleted_at"
     }
 }
+#endif

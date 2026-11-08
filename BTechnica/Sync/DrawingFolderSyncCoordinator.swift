@@ -84,7 +84,7 @@ final class DrawingFolderSyncCoordinator {
         }
 
         let token = generation
-        guard SupabaseManager.isConfigured || isTestBypassConfigured else {
+        guard !LocalOnlyWorkspace.isLocalOnly(userId: userId), SupabaseManager.isConfigured || isTestBypassConfigured else {
             return nil
         }
         guard pathSatisfied || isTestBypassConfigured else { return nil }
@@ -105,11 +105,13 @@ final class DrawingFolderSyncCoordinator {
 
         // 2) Pull folders first so drawing.folder_id FKs resolve.
         //    Pending outbox rows stay protected inside applyRemoteDrawingFolderPull.
+        //    Refresh memory right after applying: if step 3 fails, the workspace must not
+        //    keep showing (and saving from) the pre-pull folder list.
         let pullResult = await pull.pull(
             userId: userId,
             projectId: projectId,
             remote: remote,
-            onApplied: nil,
+            onApplied: refreshHandler,
             database: database
         )
         guard !Task.isCancelled, token == generation,

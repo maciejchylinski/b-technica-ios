@@ -7,8 +7,24 @@ struct AppGateView: View {
     @StateObject private var projects = ProjectsStore()
     @State private var store: AppStore?
     @State private var boundProjectId: UUID?
+    #if DEBUG
+    /// DEBUG demo workspace (local fictional data, no Supabase); see DemoMode.swift.
+    @ObservedObject private var demo = DemoModeController.shared
+    #endif
 
     var body: some View {
+        #if DEBUG
+        if demo.isActive {
+            DemoGateView(controller: demo)
+        } else {
+            authGatedContent
+        }
+        #else
+        authGatedContent
+        #endif
+    }
+
+    private var authGatedContent: some View {
         Group {
             switch auth.phase {
             case .loading:

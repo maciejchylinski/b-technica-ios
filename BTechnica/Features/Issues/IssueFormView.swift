@@ -100,7 +100,7 @@ struct IssueFormView: View {
                             HStack(spacing: 10) {
                                 ForEach(pendingPhotos) { item in
                                     ZStack(alignment: .topTrailing) {
-                                        Image(uiImage: item.image)
+                                        Image(uiImage: item.thumbnail)
                                             .resizable()
                                             .scaledToFill()
                                             .frame(width: 72, height: 72)
@@ -281,7 +281,19 @@ struct IssueFormView: View {
 
 private struct PendingFormPhoto: Identifiable {
     let id = UUID()
+    /// Saved unchanged on submit (`store.addPhoto`).
     let image: UIImage
+    /// 72 pt cell preview. Drawing `image` itself decoded a full-resolution bitmap per
+    /// pending photo and kept it resident while the form stayed open.
+    let thumbnail: UIImage
+
+    init(image: UIImage) {
+        self.image = image
+        let longest = max(image.size.width, image.size.height)
+        let scale = longest > 0 ? min(1, 216 / longest) : 1
+        let size = CGSize(width: (image.size.width * scale).rounded(), height: (image.size.height * scale).rounded())
+        self.thumbnail = image.preparingThumbnail(of: size) ?? image
+    }
 }
 
 private struct FormPickedImage: Transferable {

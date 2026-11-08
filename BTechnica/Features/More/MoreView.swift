@@ -23,6 +23,12 @@ struct MoreView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                     Button("Switch Project") {
+                        #if DEBUG
+                        if DemoMode.isDemoUser(store.userId) {
+                            DemoModeController.shared.closeProject()
+                            return
+                        }
+                        #endif
                         projects.leaveWorkspace()
                     }
                     .accessibilityIdentifier("switchProjectButton")
@@ -41,23 +47,24 @@ struct MoreView: View {
                     .accessibilityIdentifier("scheduleLink")
                 }
 
-                Section("Account") {
-                    if let email = auth.userEmail {
-                        LabeledContent("Signed in", value: email)
-                    }
-                    Button(role: .destructive) {
-                        Task { await auth.signOut() }
-                    } label: {
-                        if auth.isBusy {
-                            ProgressView()
-                        } else {
-                            Text("Sign Out")
+                #if DEBUG
+                if DemoMode.isDemoUser(store.userId) {
+                    Section {
+                        Button("Exit demo mode") {
+                            DemoModeController.shared.exit()
                         }
+                        .accessibilityIdentifier("exitDemoFromMoreButton")
+                    } header: {
+                        Text("Demo mode")
+                    } footer: {
+                        Text("Fictional local data. Nothing is synced to Supabase. Reset is available on the demo project list.")
                     }
-                    .disabled(auth.isBusy)
-                    .accessibilityIdentifier("signOutButton")
-                    .accessibilityLabel("Sign Out")
+                } else {
+                    accountSection
                 }
+                #else
+                accountSection
+                #endif
 
                 Section {
                     NavigationLink {
@@ -126,6 +133,26 @@ struct MoreView: View {
                 }
             }
             .navigationTitle("More")
+        }
+    }
+
+    private var accountSection: some View {
+        Section("Account") {
+            if let email = auth.userEmail {
+                LabeledContent("Signed in", value: email)
+            }
+            Button(role: .destructive) {
+                Task { await auth.signOut() }
+            } label: {
+                if auth.isBusy {
+                    ProgressView()
+                } else {
+                    Text("Sign Out")
+                }
+            }
+            .disabled(auth.isBusy)
+            .accessibilityIdentifier("signOutButton")
+            .accessibilityLabel("Sign Out")
         }
     }
 }

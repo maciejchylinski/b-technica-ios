@@ -250,7 +250,9 @@ struct ReportsView: View {
         let generatedDate = Date()
         let summary = filterSummary
         let blocks: [IssueReportGenerator.IssueBlock] = filteredIssues.map { issue in
-            let photos = issue.photos.compactMap { store.image(for: $0) }
+            let photos = issue.photos
+                .map { store.fileURL(for: $0) }
+                .filter { FileManager.default.fileExists(atPath: $0.path) }
             let drawing = drawing(for: issue)
             let areaName = issue.areaId.flatMap { store.area(id: $0)?.name }
             return IssueReportGenerator.IssueBlock(

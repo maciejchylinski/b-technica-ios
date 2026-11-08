@@ -1,3 +1,5 @@
+// Debug-only verification harness (launch-argument driven from BTechnicaApp).
+#if DEBUG
 import Foundation
 import PDFKit
 import Supabase
@@ -393,3 +395,4 @@ private struct LiveVertex: Decodable {
     let x: Double
     let y: Double
 }
+#endif

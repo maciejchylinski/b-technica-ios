@@ -23,3 +23,6 @@ BTechnica/Secrets.xcconfig
 
 # UITest local credentials (never commit)
 BTechnicaUITests/Credentials.local.env
+
+# Python test caches
+__pycache__/

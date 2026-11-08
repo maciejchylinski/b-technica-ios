@@ -70,7 +70,7 @@ final class DrawingPDFDownloadCoordinator {
         lastProjectId = projectId
 
         let token = generation
-        guard SupabaseManager.isConfigured || isTestBypassConfigured else { return false }
+        guard !LocalOnlyWorkspace.isLocalOnly(userId: userId), SupabaseManager.isConfigured || isTestBypassConfigured else { return false }
         guard pathSatisfied || isTestBypassConfigured else { return false }
 
         inFlightDrawingId = drawingId

@@ -26,7 +26,7 @@ final class DrawingPDFUploadService {
         database: AppDatabase? = nil,
         userRootURL: URL? = nil
     ) async {
-        guard SupabaseManager.isConfigured || DrawingPDFUploadCoordinator.shared.isTestBypassConfigured else {
+        guard !LocalOnlyWorkspace.isLocalOnly(userId: userId), SupabaseManager.isConfigured || DrawingPDFUploadCoordinator.shared.isTestBypassConfigured else {
             return
         }
 

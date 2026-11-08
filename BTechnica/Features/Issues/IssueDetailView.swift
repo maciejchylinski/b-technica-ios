@@ -130,7 +130,7 @@ struct IssueDetailView: View {
         }
         .fullScreenCover(item: $previewPhoto) { photo in
             IssuePhotoPreviewView(
-                image: store.image(for: photo),
+                url: store.fileURL(for: photo),
                 onClose: { previewPhoto = nil },
                 onDelete: {
                     previewPhoto = nil
@@ -185,7 +185,7 @@ struct IssueDetailView: View {
                             Button {
                                 previewPhoto = photo
                             } label: {
-                                IssuePhotoThumbnail(image: store.image(for: photo))
+                                IssuePhotoThumbnail(url: store.fileURL(for: photo))
                             }
                             .buttonStyle(.plain)
                             .contextMenu {
@@ -260,8 +260,12 @@ private struct PickedImage: Transferable {
     }
 }
 
+/// 72 pt thumbnail. Decoded off the main actor as a 480 px downsample through the shared
+/// gallery cache; previously every body pass decoded the full-resolution JPEG synchronously.
 private struct IssuePhotoThumbnail: View {
-    let image: UIImage?
+    let url: URL
+    @State private var image: UIImage?
+    @State private var didLoad = false
 
     var body: some View {
         Group {
@@ -269,6 +273,8 @@ private struct IssuePhotoThumbnail: View {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
+            } else if !didLoad {
+                Color(.tertiarySystemFill)
             } else {
                 Image(systemName: "photo")
                     .font(.title3)
@@ -280,15 +286,29 @@ private struct IssuePhotoThumbnail: View {
         .frame(width: 72, height: 72)
         .clipped()
         .clipShape(RoundedRectangle(cornerRadius: 8))
-        .accessibilityLabel(image == nil ? "Missing photo" : "Issue photo")
+        .accessibilityLabel(image == nil && didLoad ? "Missing photo" : "Issue photo")
+        .task(id: url) {
+            image = PhotoThumbnailCache.shared.cached(url)
+            if image == nil {
+                image = await PhotoThumbnailCache.shared.load(
+                    thumbnailURL: nil,
+                    originalURL: url,
+                    regenerate: false
+                )
+            }
+            didLoad = true
+        }
     }
 }
 
 /// Simple full-screen photo viewer. Missing files show a placeholder.
 private struct IssuePhotoPreviewView: View {
-    let image: UIImage?
+    let url: URL
     var onClose: () -> Void
     var onDelete: () -> Void
+
+    @State private var image: UIImage?
+    @State private var didLoad = false
 
     var body: some View {
         NavigationStack {
@@ -299,6 +319,9 @@ private struct IssuePhotoPreviewView: View {
                         .resizable()
                         .scaledToFit()
                         .ignoresSafeArea()
+                } else if !didLoad {
+                    ProgressView()
+                        .tint(.white)
                 } else {
                     ContentUnavailableView("Photo unavailable",
                                            systemImage: "photo")
@@ -314,6 +337,14 @@ private struct IssuePhotoPreviewView: View {
                 }
             }
             .toolbarColorScheme(.dark, for: .navigationBar)
+        }
+        .task(id: url) {
+            // Screen-sized decode off the main actor (same cap as PhotoPreviewView).
+            let url = url
+            image = await Task.detached(priority: .userInitiated) {
+                PhotoImageProcessing.downsampledImage(at: url, maxPixelSize: 2560)
+            }.value
+            didLoad = true
         }
     }
 }

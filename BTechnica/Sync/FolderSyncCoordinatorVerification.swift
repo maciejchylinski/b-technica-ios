@@ -1,3 +1,5 @@
+// Debug-only verification harness (launch-argument driven from BTechnicaApp).
+#if DEBUG
 import Foundation
 
 /// Focused check: coordinator push→pull order, pending protection, protected tombstones, cancel.
@@ -298,3 +300,4 @@ final class RecordingDrawingFolderRemote: DrawingFolderRemoteStore, @unchecked S
         }
     }
 }
+#endif

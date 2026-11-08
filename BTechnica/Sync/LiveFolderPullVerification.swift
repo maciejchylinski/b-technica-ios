@@ -1,3 +1,5 @@
+// Debug-only verification harness (launch-argument driven from BTechnicaApp).
+#if DEBUG
 import Foundation
 import Supabase
 
@@ -215,3 +217,4 @@ enum LiveFolderPullVerification {
         var value: Result?
     }
 }
+#endif

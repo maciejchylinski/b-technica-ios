@@ -1,3 +1,5 @@
+// Debug-only verification harness (launch-argument driven from BTechnicaApp).
+#if DEBUG
 import Foundation
 import GRDB
 import PDFKit
@@ -406,3 +408,4 @@ enum ProjectKnowledgeVerification {
         }
     }
 }
+#endif

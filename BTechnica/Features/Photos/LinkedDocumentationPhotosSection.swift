@@ -76,7 +76,7 @@ struct LinkedDocumentationPhotosSection: View {
             )
         }
         .sheet(item: Binding(
-            get: { editingId.map(IdentifiedUUID.init) },
+            get: { editingId.map(LinkedPhotoEditTarget.init) },
             set: { editingId = $0?.id }
         )) { target in
             PhotoEditorSheet(photos: photos, photoId: target.id)
@@ -85,6 +85,8 @@ struct LinkedDocumentationPhotosSection: View {
     }
 }
 
-private struct IdentifiedUUID: Identifiable {
+/// Sheet item for editing a linked photo. Named distinctly from Knowledge's internal
+/// `IdentifiedUUID` so both modules compile together without an ambiguous type lookup.
+private struct LinkedPhotoEditTarget: Identifiable {
     let id: UUID
 }

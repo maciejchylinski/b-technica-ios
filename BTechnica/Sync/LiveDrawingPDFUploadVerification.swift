@@ -1,3 +1,5 @@
+// Debug-only verification harness (launch-argument driven from BTechnicaApp).
+#if DEBUG
 import Foundation
 import Supabase
 
@@ -237,3 +239,4 @@ private struct LivePDFProjectInsert: Encodable {
         case ownerId = "owner_id"
     }
 }
+#endif

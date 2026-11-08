@@ -30,7 +30,7 @@ final class SyncOutboxPushService {
         areaRemote: AreaRemoteStore = SupabaseAreaRemoteStore(),
         database: AppDatabase? = nil
     ) async {
-        guard SupabaseManager.isConfigured || DrawingFolderSyncCoordinator.shared.isTestBypassConfigured else {
+        guard !LocalOnlyWorkspace.isLocalOnly(userId: userId), SupabaseManager.isConfigured || DrawingFolderSyncCoordinator.shared.isTestBypassConfigured else {
             return
         }
 
@@ -119,8 +119,10 @@ final class SyncOutboxPushService {
         }
 
         guard folder.projectId == activeProjectId else {
-            // Keep global FIFO: wait until that project is active.
-            return .stopDrain
+            // Another project's operation: leave it queued (FIFO is kept per project, where
+            // the folder → drawing → area dependencies live) and keep draining this project.
+            // Returning .stopDrain here let one pending op from project A block all of B.
+            return .continueDrain
         }
 
         do {
@@ -177,7 +179,7 @@ final class SyncOutboxPushService {
         }
 
         guard payload.projectId == activeProjectId else {
-            return .stopDrain
+            return .continueDrain // other project: stays queued, see processFolder
         }
 
         guard entry.operation == .create else {
@@ -201,7 +203,10 @@ final class SyncOutboxPushService {
                 ).localizedDescription,
                 nextAttemptAt: Self.nextAttemptDate(attemptCount: entry.attemptCount)
             )
-            return .stopDrain
+            // Not a network failure: only this drawing (and areas on it, which defer
+            // themselves via `syncedDrawingRevisionId`) must wait. Unrelated folder and
+            // drawing ops behind it keep flowing instead of waiting on one upload.
+            return .continueDrain
         }
 
         do {
@@ -282,7 +287,7 @@ final class SyncOutboxPushService {
         }
 
         guard area.projectId == activeProjectId else {
-            return .stopDrain
+            return .continueDrain // other project: stays queued, see processFolder
         }
 
         guard entry.operation == .create else {

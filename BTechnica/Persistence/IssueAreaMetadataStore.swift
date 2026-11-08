@@ -35,11 +35,13 @@ extension AppDatabase {
                 arguments: [projectId.uuidString]
             )
 
+            // One grouped photo query instead of one query per issue (N+1 on workspace open).
+            let photosByIssue = try Self.fetchPhotosByIssue(projectId: projectId, db: db)
             var result: [Issue] = []
             result.reserveCapacity(issueRows.count)
             for row in issueRows {
                 var issue = try Self.issue(from: row)
-                issue.photos = try Self.fetchPhotos(issueId: issue.id, db: db)
+                issue.photos = photosByIssue[issue.id.uuidString] ?? []
                 result.append(issue)
             }
             return result
@@ -259,28 +261,34 @@ extension AppDatabase {
         )
     }
 
-    private static func fetchPhotos(issueId: UUID, db: Database) throws -> [IssuePhoto] {
+    /// Photo metadata for every issue of a project, grouped by `issue_id` string and
+    /// ordered by `created_at` within each issue (same order as the former per-issue query).
+    private static func fetchPhotosByIssue(projectId: UUID, db: Database) throws -> [String: [IssuePhoto]] {
         let rows = try Row.fetchAll(
             db,
             sql: """
-            SELECT id, file_name, created_at
-            FROM issue_photos
-            WHERE issue_id = ?
-            ORDER BY created_at ASC
+            SELECT p.id, p.issue_id, p.file_name, p.created_at
+            FROM issue_photos p
+            JOIN issues i ON i.id = p.issue_id
+            WHERE i.project_id = ?
+            ORDER BY p.issue_id ASC, p.created_at ASC
             """,
-            arguments: [issueId.uuidString]
+            arguments: [projectId.uuidString]
         )
-        return try rows.map { row in
+        var grouped: [String: [IssuePhoto]] = [:]
+        for row in rows {
             guard let id = UUID(uuidString: row["id"]) else {
                 throw IssueAreaMetadataStoreError.invalidRow("issue_photos")
             }
+            let issueId: String = row["issue_id"]
             let createdRaw: String = row["created_at"]
-            return IssuePhoto(
+            grouped[issueId, default: []].append(IssuePhoto(
                 id: id,
                 fileName: row["file_name"],
                 createdDate: SQLiteDateCoding.date(from: createdRaw) ?? Date()
-            )
+            ))
         }
+        return grouped
     }
 
     static func encodeVertices(_ vertices: [PDFPoint]) throws -> String {

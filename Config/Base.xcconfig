@@ -1,2 +1,5 @@
 // Shared build settings. Local Secrets.xcconfig is optional and gitignored.
 #include? "Secrets.xcconfig"
+
+// DEBUG demo workspace fixtures (BTechnica/DemoFixtures/demo-fixture-*) are bundled only in Debug.
+EXCLUDED_SOURCE_FILE_NAMES[config=Release] = demo-fixture-*

@@ -267,6 +267,9 @@ struct BTechnicaApp: App {
             }
         }
         ProjectKnowledgeVerification.runIfRequested()
+        WorkspaceDeltaPersistenceVerification.runIfRequested()
+        OutboxDrainVerification.runIfRequested()
+        DemoSeedVerification.runIfRequested()
         #endif
     }
 

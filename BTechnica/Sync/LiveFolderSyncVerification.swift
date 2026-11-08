@@ -1,3 +1,5 @@
+// Debug-only verification harness (launch-argument driven from BTechnicaApp).
+#if DEBUG
 import Foundation
 import Supabase
 
@@ -284,3 +286,4 @@ private struct LiveFolderProbe: Decodable {
         case deletedAt = "deleted_at"
     }
 }
+#endif

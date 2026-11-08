@@ -1,0 +1,3463 @@
+{
+ "formatVersion": 1,
+ "seedVersion": "1-c48a9dd38c13",
+ "demoUserId": "DE300000-B7EC-4A1C-8000-000000000001",
+ "note": "Dane fikcyjne do trybu demonstracyjnego (DEBUG). Generator: Tools/DemoFixtures.",
+ "contractors": [
+  {
+   "id": "0AB4B6C8-D2ED-5F1B-B86A-00857ABA3BD2",
+   "name": "GB Horyzont Sp. z o.o.",
+   "notes": "Generalny wykonawca — projekt A"
+  },
+  {
+   "id": "FDD553EA-CA24-52C9-BCEE-24EB5A4E1FA0",
+   "name": "Betonex Konstrukcje Sp. z o.o.",
+   "notes": "Konstrukcje żelbetowe"
+  },
+  {
+   "id": "A9C23BF8-7033-5B9D-BD26-C693CA73ACCB",
+   "name": "Elektro-Volt Instalacje s.c.",
+   "notes": "Instalacje elektryczne i teletechniczne"
+  },
+  {
+   "id": "DB4BAD6D-5713-54FB-856E-7DDE329D992F",
+   "name": "AquaTerm Sp. z o.o.",
+   "notes": "Instalacje sanitarne, c.o., wentylacja, HVAC"
+  },
+  {
+   "id": "077E6BDA-64F1-59D6-AD60-2A84A53993CF",
+   "name": "Pro-Dom Wykończenia Sp. j.",
+   "notes": "Roboty wykończeniowe"
+  },
+  {
+   "id": "04214ABD-D482-5666-A1F8-250C9035F418",
+   "name": "Lumen Okna i Fasady Sp. z o.o.",
+   "notes": "Stolarka okienna i elewacje"
+  },
+  {
+   "id": "DEE5B8A4-61B5-5CA8-A44C-EDE2C6DAC685",
+   "name": "Zieleń-Tech Sp. z o.o.",
+   "notes": "Zagospodarowanie terenu"
+  },
+  {
+   "id": "BF17B86D-10E2-5A14-80F2-E470607DCF54",
+   "name": "Modulo Fit-Out Sp. z o.o.",
+   "notes": "Generalny wykonawca — projekt B"
+  }
+ ],
+ "disciplines": [
+  {
+   "id": "73191991-7F19-54AC-83E1-513D4DB9A0CE",
+   "name": "Architektura"
+  },
+  {
+   "id": "9FC41B1A-AF0F-5CA0-BF70-B2988E301BF6",
+   "name": "Konstrukcja"
+  },
+  {
+   "id": "AC83A374-29E2-5B95-9695-0C79A1798881",
+   "name": "Instalacje sanitarne"
+  },
+  {
+   "id": "DB098E2D-2138-50B5-A067-3BDA90C966A6",
+   "name": "Wentylacja i klimatyzacja"
+  },
+  {
+   "id": "EF7E285B-55A9-515D-A430-3AB091626229",
+   "name": "Instalacje elektryczne"
+  },
+  {
+   "id": "FC284171-AC84-5323-8716-13E9B6713C38",
+   "name": "Roboty wykończeniowe"
+  },
+  {
+   "id": "4001F439-21C8-5360-B109-83C57756D171",
+   "name": "Zagospodarowanie terenu"
+  },
+  {
+   "id": "A2F4742C-B782-54A9-9F3C-6D11DA97E3F5",
+   "name": "BHP"
+  }
+ ],
+ "companies": [
+  {
+   "id": "0E07700E-3759-5435-8406-BB1E6A200CDD",
+   "name": "Zielone Tarasy Development Sp. z o.o.",
+   "trade": "Inwestor",
+   "taxId": "000-000-10-01",
+   "phone": "+48 000 000 101",
+   "email": "biuro@zielonetarasy.demo.example",
+   "website": "https://zielonetarasy.demo.example",
+   "address": "ul. Przykładowa 1, 00-000 Miasto (adres fikcyjny)",
+   "notes": "Dane fikcyjne — projekt demonstracyjny B Technica."
+  },
+  {
+   "id": "4067476A-6D9E-5DB0-838A-9E1BB7F8C3A6",
+   "name": "GB Horyzont Sp. z o.o.",
+   "trade": "Generalny wykonawca",
+   "taxId": "000-000-10-02",
+   "phone": "+48 000 000 102",
+   "email": "biuro@horyzont.demo.example",
+   "website": "https://horyzont.demo.example",
+   "address": "ul. Przykładowa 1, 00-000 Miasto (adres fikcyjny)",
+   "notes": "Dane fikcyjne — projekt demonstracyjny B Technica."
+  },
+  {
+   "id": "00CE82B4-2953-5F7C-9663-0ED0DD8770F9",
+   "name": "Betonex Konstrukcje Sp. z o.o.",
+   "trade": "Konstrukcje żelbetowe",
+   "taxId": "000-000-10-03",
+   "phone": "+48 000 000 103",
+   "email": "biuro@betonex.demo.example",
+   "website": "https://betonex.demo.example",
+   "address": "ul. Przykładowa 1, 00-000 Miasto (adres fikcyjny)",
+   "notes": "Dane fikcyjne — projekt demonstracyjny B Technica."
+  },
+  {
+   "id": "9C35DBAE-43C9-5813-9AFA-70A5A9CC0DB9",
+   "name": "Elektro-Volt Instalacje s.c.",
+   "trade": "Instalacje elektryczne i teletechniczne",
+   "taxId": "000-000-10-04",
+   "phone": "+48 000 000 104",
+   "email": "biuro@elektrovolt.demo.example",
+   "website": "https://elektrovolt.demo.example",
+   "address": "ul. Przykładowa 1, 00-000 Miasto (adres fikcyjny)",
+   "notes": "Dane fikcyjne — projekt demonstracyjny B Technica."
+  },
+  {
+   "id": "7E75D5D5-7D9C-5738-A2A7-88EE61FA20AC",
+   "name": "AquaTerm Sp. z o.o.",
+   "trade": "Instalacje sanitarne i HVAC",
+   "taxId": "000-000-10-05",
+   "phone": "+48 000 000 105",
+   "email": "biuro@aquaterm.demo.example",
+   "website": "https://aquaterm.demo.example",
+   "address": "ul. Przykładowa 1, 00-000 Miasto (adres fikcyjny)",
+   "notes": "Dane fikcyjne — projekt demonstracyjny B Technica."
+  },
+  {
+   "id": "FA2AD0A8-AF51-59BD-989F-746CEC228D02",
+   "name": "Pro-Dom Wykończenia Sp. j.",
+   "trade": "Roboty wykończeniowe",
+   "taxId": "000-000-10-06",
+   "phone": "+48 000 000 106",
+   "email": "biuro@prodom.demo.example",
+   "website": "https://prodom.demo.example",
+   "address": "ul. Przykładowa 1, 00-000 Miasto (adres fikcyjny)",
+   "notes": "Dane fikcyjne — projekt demonstracyjny B Technica."
+  },
+  {
+   "id": "6833BCDE-CB6A-5E4C-A194-AEC12E8EC44A",
+   "name": "Lumen Okna i Fasady Sp. z o.o.",
+   "trade": "Stolarka okienna i elewacje",
+   "taxId": "000-000-10-07",
+   "phone": "+48 000 000 107",
+   "email": "biuro@lumen.demo.example",
+   "website": "https://lumen.demo.example",
+   "address": "ul. Przykładowa 1, 00-000 Miasto (adres fikcyjny)",
+   "notes": "Dane fikcyjne — projekt demonstracyjny B Technica."
+  },
+  {
+   "id": "BE03F238-B11D-5B73-BC83-DF42D3D6C63E",
+   "name": "Zieleń-Tech Sp. z o.o.",
+   "trade": "Zagospodarowanie terenu",
+   "taxId": "000-000-10-08",
+   "phone": "+48 000 000 108",
+   "email": "biuro@zielentech.demo.example",
+   "website": "https://zielentech.demo.example",
+   "address": "ul. Przykładowa 1, 00-000 Miasto (adres fikcyjny)",
+   "notes": "Dane fikcyjne — projekt demonstracyjny B Technica."
+  },
+  {
+   "id": "64C6AA33-0432-53FD-A52C-923B3E4425C1",
+   "name": "Hurtownia Budowlana Kamień",
+   "trade": "Dostawca materiałów budowlanych",
+   "taxId": "000-000-10-09",
+   "phone": "+48 000 000 109",
+   "email": "biuro@kamien.demo.example",
+   "website": "https://kamien.demo.example",
+   "address": "ul. Przykładowa 1, 00-000 Miasto (adres fikcyjny)",
+   "notes": "Dane fikcyjne — projekt demonstracyjny B Technica."
+  },
+  {
+   "id": "61C5D240-828B-59D1-A928-7093D78F2DCD",
+   "name": "Pracownia Projektowa Linea",
+   "trade": "Projektant — architektura i konstrukcja",
+   "taxId": "000-000-11-10",
+   "phone": "+48 000 000 110",
+   "email": "biuro@linea.demo.example",
+   "website": "https://linea.demo.example",
+   "address": "ul. Przykładowa 1, 00-000 Miasto (adres fikcyjny)",
+   "notes": "Dane fikcyjne — projekt demonstracyjny B Technica."
+  },
+  {
+   "id": "3488E5B1-6B15-54AB-BB6E-F3FEFD12B6D8",
+   "name": "Centrum Office Park Sp. z o.o.",
+   "trade": "Inwestor (zarządca budynku)",
+   "taxId": "000-000-11-11",
+   "phone": "+48 000 000 111",
+   "email": "biuro@centrumoffice.demo.example",
+   "website": "https://centrumoffice.demo.example",
+   "address": "ul. Przykładowa 1, 00-000 Miasto (adres fikcyjny)",
+   "notes": "Dane fikcyjne — projekt demonstracyjny B Technica."
+  },
+  {
+   "id": "49E65925-D08E-5ED9-80E2-88A9175BF47A",
+   "name": "Modulo Fit-Out Sp. z o.o.",
+   "trade": "Generalny wykonawca fit-out",
+   "taxId": "000-000-11-12",
+   "phone": "+48 000 000 112",
+   "email": "biuro@modulo.demo.example",
+   "website": "https://modulo.demo.example",
+   "address": "ul. Przykładowa 1, 00-000 Miasto (adres fikcyjny)",
+   "notes": "Dane fikcyjne — projekt demonstracyjny B Technica."
+  }
+ ],
+ "people": [
+  {
+   "id": "1540A3B8-6BEF-52FE-9215-0933E137EC20",
+   "firstName": "Tomasz",
+   "lastName": "Wierzbicki",
+   "companyId": "4067476A-6D9E-5DB0-838A-9E1BB7F8C3A6",
+   "jobTitle": "Kierownik budowy",
+   "phone": "+48 000 000 201",
+   "email": "t.wierzbicki@horyzont.demo.example",
+   "notes": "Osoba fikcyjna."
+  },
+  {
+   "id": "CDF0CC9C-AC99-5ACF-B3BD-E497880601A6",
+   "firstName": "Katarzyna",
+   "lastName": "Malinowska",
+   "companyId": "4067476A-6D9E-5DB0-838A-9E1BB7F8C3A6",
+   "jobTitle": "Kierownik projektu",
+   "phone": "+48 000 000 202",
+   "email": "k.malinowska@horyzont.demo.example",
+   "notes": "Osoba fikcyjna."
+  },
+  {
+   "id": "224170A6-42CD-5C6D-915D-20D61CBB4A54",
+   "firstName": "Piotr",
+   "lastName": "Sadowski",
+   "companyId": "0E07700E-3759-5435-8406-BB1E6A200CDD",
+   "jobTitle": "Inspektor nadzoru inwestorskiego",
+   "phone": "+48 000 000 203",
+   "email": "p.sadowski@zielonetarasy.demo.example",
+   "notes": "Osoba fikcyjna."
+  },
+  {
+   "id": "A931BC8C-7B66-56A5-BE83-374A70C757F5",
+   "firstName": "Agnieszka",
+   "lastName": "Lis",
+   "companyId": "4067476A-6D9E-5DB0-838A-9E1BB7F8C3A6",
+   "jobTitle": "Koordynator BHP",
+   "phone": "+48 000 000 204",
+   "email": "a.lis@horyzont.demo.example",
+   "notes": "Osoba fikcyjna."
+  },
+  {
+   "id": "3455F1D5-8898-5910-8725-E79662BA6908",
+   "firstName": "Rafał",
+   "lastName": "Kubiak",
+   "companyId": "00CE82B4-2953-5F7C-9663-0ED0DD8770F9",
+   "jobTitle": "Kierownik robót konstrukcyjnych",
+   "phone": "+48 000 000 205",
+   "email": "r.kubiak@betonex.demo.example",
+   "notes": "Osoba fikcyjna."
+  },
+  {
+   "id": "5E508635-7568-542F-BD70-59AE6AEF0703",
+   "firstName": "Michał",
+   "lastName": "Domański",
+   "companyId": "9C35DBAE-43C9-5813-9AFA-70A5A9CC0DB9",
+   "jobTitle": "Kierownik robót elektrycznych",
+   "phone": "+48 000 000 206",
+   "email": "m.domanski@elektrovolt.demo.example",
+   "notes": "Osoba fikcyjna."
+  },
+  {
+   "id": "063A7985-847B-5299-9973-6253F267C8AB",
+   "firstName": "Ewa",
+   "lastName": "Jabłońska",
+   "companyId": "7E75D5D5-7D9C-5738-A2A7-88EE61FA20AC",
+   "jobTitle": "Kierownik robót sanitarnych",
+   "phone": "+48 000 000 207",
+   "email": "e.jablonska@aquaterm.demo.example",
+   "notes": "Osoba fikcyjna."
+  },
+  {
+   "id": "5B1CA38E-C949-51B1-96F3-C1523F69EDFC",
+   "firstName": "Paweł",
+   "lastName": "Górecki",
+   "companyId": "FA2AD0A8-AF51-59BD-989F-746CEC228D02",
+   "jobTitle": "Brygadzista wykończeń",
+   "phone": "+48 000 000 208",
+   "email": "p.gorecki@prodom.demo.example",
+   "notes": "Osoba fikcyjna."
+  },
+  {
+   "id": "CBF9FA77-8377-5993-9815-82D38D4C01AD",
+   "firstName": "Magdalena",
+   "lastName": "Wróbel",
+   "companyId": "64C6AA33-0432-53FD-A52C-923B3E4425C1",
+   "jobTitle": "Opiekun handlowy",
+   "phone": "+48 000 000 209",
+   "email": "m.wrobel@kamien.demo.example",
+   "notes": "Osoba fikcyjna."
+  },
+  {
+   "id": "601603D4-D365-5CCC-874C-E394FA447B1C",
+   "firstName": "Joanna",
+   "lastName": "Czarnecka",
+   "companyId": "61C5D240-828B-59D1-A928-7093D78F2DCD",
+   "jobTitle": "Architekt prowadząca",
+   "phone": "+48 000 000 210",
+   "email": "j.czarnecka@linea.demo.example",
+   "notes": "Osoba fikcyjna."
+  },
+  {
+   "id": "A7521E89-4482-56F0-85F8-8883073B1F2F",
+   "firstName": "Krzysztof",
+   "lastName": "Nowicki",
+   "companyId": "61C5D240-828B-59D1-A928-7093D78F2DCD",
+   "jobTitle": "Projektant konstrukcji",
+   "phone": "+48 000 000 211",
+   "email": "k.nowicki@linea.demo.example",
+   "notes": "Osoba fikcyjna."
+  },
+  {
+   "id": "BB6D08F0-C71A-5DFA-B614-BF09870C78BC",
+   "firstName": "Łukasz",
+   "lastName": "Pawlak",
+   "companyId": "6833BCDE-CB6A-5E4C-A194-AEC12E8EC44A",
+   "jobTitle": "Kierownik robót elewacyjnych",
+   "phone": "+48 000 000 212",
+   "email": "l.pawlak@lumen.demo.example",
+   "notes": "Osoba fikcyjna."
+  },
+  {
+   "id": "9C1A097D-EDE2-534C-B61C-6A95352617EA",
+   "firstName": "Monika",
+   "lastName": "Zając",
+   "companyId": "49E65925-D08E-5ED9-80E2-88A9175BF47A",
+   "jobTitle": "Kierownik projektu fit-out",
+   "phone": "+48 000 000 213",
+   "email": "m.zajac@modulo.demo.example",
+   "notes": "Osoba fikcyjna."
+  },
+  {
+   "id": "F8908084-93EC-56E0-B4D9-6F50D20D697F",
+   "firstName": "Adam",
+   "lastName": "Kowalczyk",
+   "companyId": "3488E5B1-6B15-54AB-BB6E-F3FEFD12B6D8",
+   "jobTitle": "Administrator budynku",
+   "phone": "+48 000 000 214",
+   "email": "a.kowalczyk@centrumoffice.demo.example",
+   "notes": "Osoba fikcyjna."
+  }
+ ],
+ "equipment": [
+  {
+   "id": "50FA1F9F-9671-5729-AA18-44891738C69B",
+   "name": "Niwelator optyczny NO-32",
+   "category": "Geodezja",
+   "identifier": "BT-EQ-001",
+   "serialNumber": "NO32-2291-DEMO",
+   "notes": "Sprzęt demonstracyjny (dane fikcyjne).",
+   "createdDayOffset": -200,
+   "actions": [
+    {
+     "kind": "issue",
+     "dayOffset": -120,
+     "projectId": "D5D3FEC3-FBA1-5BE9-B139-45BC967DC278",
+     "location": "Budynek A — strop nad parterem",
+     "notes": "Kontrola rzędnych szalunku",
+     "recipientKind": "person",
+     "recipientId": "3455F1D5-8898-5910-8725-E79662BA6908"
+    },
+    {
+     "kind": "return",
+     "dayOffset": -100,
+     "condition": "good",
+     "notes": "Zwrot po betonowaniu stropu"
+    },
+    {
+     "kind": "issue",
+     "dayOffset": -40,
+     "projectId": "D5D3FEC3-FBA1-5BE9-B139-45BC967DC278",
+     "location": "Biuro budowy",
+     "notes": null,
+     "recipientKind": "person",
+     "recipientId": "1540A3B8-6BEF-52FE-9215-0933E137EC20"
+    }
+   ]
+  },
+  {
+   "id": "DC961ED6-531E-5304-B0E7-DC87F472E2CD",
+   "name": "Tachimetr elektroniczny TS-05",
+   "category": "Geodezja",
+   "identifier": "BT-EQ-002",
+   "serialNumber": "TS05-7781-DEMO",
+   "notes": "Sprzęt demonstracyjny (dane fikcyjne).",
+   "createdDayOffset": -200,
+   "actions": [
+    {
+     "kind": "issue",
+     "dayOffset": -150,
+     "projectId": "D5D3FEC3-FBA1-5BE9-B139-45BC967DC278",
+     "location": "Plac budowy",
+     "notes": "Tyczenie osi",
+     "recipientKind": "text",
+     "recipientName": "Geodeta uprawniony (podwykonawca zewnętrzny)"
+    },
+    {
+     "kind": "return",
+     "dayOffset": -149,
+     "condition": "good",
+     "notes": null
+    },
+    {
+     "kind": "issue",
+     "dayOffset": -30,
+     "projectId": "D5D3FEC3-FBA1-5BE9-B139-45BC967DC278",
+     "location": "Budynek A",
+     "notes": "Inwentaryzacja",
+     "recipientKind": "text",
+     "recipientName": "Geodeta uprawniony (podwykonawca zewnętrzny)"
+    },
+    {
+     "kind": "return",
+     "dayOffset": -29,
+     "condition": "good",
+     "notes": null
+    }
+   ]
+  },
+  {
+   "id": "6625CDA1-8DC0-5A71-BAAD-685DCE996F06",
+   "name": "Laser rotacyjny LR-300",
+   "category": "Geodezja",
+   "identifier": "BT-EQ-003",
+   "serialNumber": "LR300-1045-DEMO",
+   "notes": "Sprzęt demonstracyjny (dane fikcyjne).",
+   "createdDayOffset": -180,
+   "actions": [
+    {
+     "kind": "issue",
+     "dayOffset": -90,
+     "projectId": "D5D3FEC3-FBA1-5BE9-B139-45BC967DC278",
+     "location": "Garaż podziemny",
+     "notes": "Poziomowanie posadzki",
+     "recipientKind": "person",
+     "recipientId": "3455F1D5-8898-5910-8725-E79662BA6908"
+    },
+    {
+     "kind": "return",
+     "dayOffset": -60,
+     "condition": "damaged",
+     "notes": "Pęknięta osłona głowicy — do serwisu"
+    }
+   ]
+  },
+  {
+   "id": "9E983143-9CAB-5424-8024-BF8D66169A00",
+   "name": "Miernik wilgotności betonu CM-2",
+   "category": "Pomiary",
+   "identifier": "BT-EQ-004",
+   "serialNumber": "CM2-3310-DEMO",
+   "notes": "Sprzęt demonstracyjny (dane fikcyjne).",
+   "createdDayOffset": -150,
+   "actions": [
+    {
+     "kind": "issue",
+     "dayOffset": -20,
+     "projectId": "D5D3FEC3-FBA1-5BE9-B139-45BC967DC278",
+     "location": "Budynek A — piętro 1, lokale A/07–A/10",
+     "notes": "Pomiary wylewek",
+     "recipientKind": "person",
+     "recipientId": "5B1CA38E-C949-51B1-96F3-C1523F69EDFC"
+    }
+   ]
+  },
+  {
+   "id": "F32CD34B-7389-58FB-BB94-BFB327C72B6B",
+   "name": "Kamera termowizyjna TK-160",
+   "category": "Pomiary",
+   "identifier": "BT-EQ-005",
+   "serialNumber": "TK160-5522-DEMO",
+   "notes": "Sprzęt demonstracyjny (dane fikcyjne).",
+   "createdDayOffset": -150,
+   "actions": [
+    {
+     "kind": "issue",
+     "dayOffset": -15,
+     "projectId": "044DC415-4691-5A4E-B4E3-9B8B5664FB7D",
+     "location": "3. piętro — serwerownia 3.12",
+     "notes": "Pomiary złączy w RPS",
+     "recipientKind": "person",
+     "recipientId": "5E508635-7568-542F-BD70-59AE6AEF0703"
+    }
+   ]
+  },
+  {
+   "id": "217E3E57-6AC1-5347-9BA9-BC551DE82370",
+   "name": "Młotowiertarka SDS-Max 8 kg",
+   "category": "Elektronarzędzia",
+   "identifier": "BT-EQ-006",
+   "serialNumber": "SDS8-8812-DEMO",
+   "notes": "Sprzęt demonstracyjny (dane fikcyjne).",
+   "createdDayOffset": -210,
+   "actions": [
+    {
+     "kind": "issue",
+     "dayOffset": -70,
+     "projectId": "D5D3FEC3-FBA1-5BE9-B139-45BC967DC278",
+     "location": "Budynek A — parter",
+     "notes": "Przebicia pod trasy kablowe",
+     "recipientKind": "company",
+     "recipientId": "9C35DBAE-43C9-5813-9AFA-70A5A9CC0DB9"
+    },
+    {
+     "kind": "return",
+     "dayOffset": -50,
+     "condition": "good",
+     "notes": null
+    },
+    {
+     "kind": "issue",
+     "dayOffset": -10,
+     "projectId": "D5D3FEC3-FBA1-5BE9-B139-45BC967DC278",
+     "location": "Pomieszczenie techniczne 0.18",
+     "notes": "Przejścia instalacyjne",
+     "recipientKind": "company",
+     "recipientId": "7E75D5D5-7D9C-5738-A2A7-88EE61FA20AC"
+    }
+   ]
+  },
+  {
+   "id": "34520EFD-C653-57D2-BD5B-261108B3A179",
+   "name": "Tablet budowlany #1",
+   "category": "IT",
+   "identifier": "BT-EQ-007",
+   "serialNumber": "TAB1-0007-DEMO",
+   "notes": "Sprzęt demonstracyjny (dane fikcyjne).",
+   "createdDayOffset": -100,
+   "actions": [
+    {
+     "kind": "issue",
+     "dayOffset": -80,
+     "projectId": "D5D3FEC3-FBA1-5BE9-B139-45BC967DC278",
+     "location": "Inspektor nadzoru",
+     "notes": "Odbiory z aplikacją B Technica",
+     "recipientKind": "person",
+     "recipientId": "224170A6-42CD-5C6D-915D-20D61CBB4A54"
+    }
+   ]
+  },
+  {
+   "id": "840DB526-2120-5669-93B2-0D2E38FB147F",
+   "name": "Dalmierz laserowy 80 m",
+   "category": "Pomiary",
+   "identifier": "BT-EQ-008",
+   "serialNumber": "DL80-4410-DEMO",
+   "notes": "Sprzęt demonstracyjny (dane fikcyjne).",
+   "createdDayOffset": -120,
+   "actions": [
+    {
+     "kind": "issue",
+     "dayOffset": -40,
+     "projectId": "044DC415-4691-5A4E-B4E3-9B8B5664FB7D",
+     "location": "3. piętro",
+     "notes": "Inwentaryzacja pomieszczeń",
+     "recipientKind": "person",
+     "recipientId": "9C1A097D-EDE2-534C-B61C-6A95352617EA"
+    },
+    {
+     "kind": "return",
+     "dayOffset": -5,
+     "condition": "good",
+     "notes": null
+    }
+   ]
+  },
+  {
+   "id": "584C1F79-B811-5FDA-9E3B-C660D8E7BF51",
+   "name": "Agregat prądotwórczy 5 kVA",
+   "category": "Zasilanie",
+   "identifier": "BT-EQ-009",
+   "serialNumber": "AG5-2210-DEMO",
+   "notes": "Sprzęt demonstracyjny (dane fikcyjne).",
+   "createdDayOffset": -220,
+   "actions": [
+    {
+     "kind": "issue",
+     "dayOffset": -200,
+     "projectId": "D5D3FEC3-FBA1-5BE9-B139-45BC967DC278",
+     "location": "Zaplecze budowy",
+     "notes": "Zasilanie tymczasowe",
+     "recipientKind": "text",
+     "recipientName": "Brygada ogólnobudowlana GW"
+    },
+    {
+     "kind": "return",
+     "dayOffset": -150,
+     "condition": "good",
+     "notes": "Podłączono przyłącze budowlane"
+    }
+   ]
+  },
+  {
+   "id": "A3501DD5-84E0-5ADD-BAF2-3F3D18131F8A",
+   "name": "Detektor przewodów i zbrojenia",
+   "category": "Pomiary",
+   "identifier": "BT-EQ-010",
+   "serialNumber": "DET-6620-DEMO",
+   "notes": "Sprzęt demonstracyjny (dane fikcyjne).",
+   "createdDayOffset": -90,
+   "actions": [
+    {
+     "kind": "issue",
+     "dayOffset": -60,
+     "projectId": "D5D3FEC3-FBA1-5BE9-B139-45BC967DC278",
+     "location": "Budynek A — strop nad parterem",
+     "notes": "Lokalizacja zbrojenia",
+     "recipientKind": "person",
+     "recipientId": "3455F1D5-8898-5910-8725-E79662BA6908"
+    },
+    {
+     "kind": "return",
+     "dayOffset": -58,
+     "condition": "good",
+     "notes": null
+    },
+    {
+     "kind": "issue",
+     "dayOffset": -25,
+     "projectId": "044DC415-4691-5A4E-B4E3-9B8B5664FB7D",
+     "location": "3. piętro — strop",
+     "notes": "Przebicia pod koryta",
+     "recipientKind": "person",
+     "recipientId": "9C1A097D-EDE2-534C-B61C-6A95352617EA"
+    },
+    {
+     "kind": "return",
+     "dayOffset": -24,
+     "condition": "good",
+     "notes": null
+    }
+   ]
+  }
+ ],
+ "projects": [
+  {
+   "id": "D5D3FEC3-FBA1-5BE9-B139-45BC967DC278",
+   "key": "A",
+   "name": "Osiedle Zielone Tarasy — Etap I",
+   "description": "Budowa zespołu budynków mieszkalnych z garażem podziemnym. Etap I: budynek A (30 lokali), budynek B, garaż na 40 miejsc i zagospodarowanie terenu.",
+   "createdDayOffset": -320,
+   "contactLinks": [
+    {
+     "id": "2B2D889D-0A5D-5A1B-BDEE-1032E09FD58B",
+     "kind": "company",
+     "contactId": "0E07700E-3759-5435-8406-BB1E6A200CDD",
+     "role": "Inwestor"
+    },
+    {
+     "id": "73772601-5604-5997-A83C-FFAD89B768F2",
+     "kind": "company",
+     "contactId": "4067476A-6D9E-5DB0-838A-9E1BB7F8C3A6",
+     "role": "Generalny wykonawca"
+    },
+    {
+     "id": "72B7A2C0-A056-52DE-8DCF-5F61501F7E6A",
+     "kind": "company",
+     "contactId": "00CE82B4-2953-5F7C-9663-0ED0DD8770F9",
+     "role": "Podwykonawca — konstrukcja"
+    },
+    {
+     "id": "12804BB7-004C-554A-AE5D-3955021AC353",
+     "kind": "company",
+     "contactId": "9C35DBAE-43C9-5813-9AFA-70A5A9CC0DB9",
+     "role": "Podwykonawca — elektryka"
+    },
+    {
+     "id": "8E4EE240-B6BB-5409-A16E-4FFF466CDC02",
+     "kind": "company",
+     "contactId": "7E75D5D5-7D9C-5738-A2A7-88EE61FA20AC",
+     "role": "Podwykonawca — sanitarne i wentylacja"
+    },
+    {
+     "id": "151338BB-CD96-5435-A036-B015C12DE1DA",
+     "kind": "company",
+     "contactId": "FA2AD0A8-AF51-59BD-989F-746CEC228D02",
+     "role": "Podwykonawca — wykończenia"
+    },
+    {
+     "id": "FC0F79EF-279A-5780-A65C-FF4271DB23B6",
+     "kind": "company",
+     "contactId": "6833BCDE-CB6A-5E4C-A194-AEC12E8EC44A",
+     "role": "Podwykonawca — stolarka i elewacja"
+    },
+    {
+     "id": "7CBBCBFE-487D-5029-A3EC-527957CAC3CA",
+     "kind": "company",
+     "contactId": "BE03F238-B11D-5B73-BC83-DF42D3D6C63E",
+     "role": "Podwykonawca — teren"
+    },
+    {
+     "id": "D6F1E560-829A-5700-8FCB-454501E66509",
+     "kind": "company",
+     "contactId": "64C6AA33-0432-53FD-A52C-923B3E4425C1",
+     "role": "Dostawca materiałów"
+    },
+    {
+     "id": "E28826BF-EA9B-547F-9214-21FCA04F3C23",
+     "kind": "company",
+     "contactId": "61C5D240-828B-59D1-A928-7093D78F2DCD",
+     "role": "Projektant"
+    },
+    {
+     "id": "4BED8754-E78A-58DD-B12A-EB1A388B914B",
+     "kind": "person",
+     "contactId": "1540A3B8-6BEF-52FE-9215-0933E137EC20",
+     "role": "Kierownik budowy"
+    },
+    {
+     "id": "412CCFDA-9F50-5352-9767-272E806C0889",
+     "kind": "person",
+     "contactId": "CDF0CC9C-AC99-5ACF-B3BD-E497880601A6",
+     "role": "Kierownik projektu GW"
+    },
+    {
+     "id": "D807E08A-638B-5A7E-A4DA-1CD6DFCC9C5B",
+     "kind": "person",
+     "contactId": "224170A6-42CD-5C6D-915D-20D61CBB4A54",
+     "role": "Inspektor nadzoru"
+    },
+    {
+     "id": "10DBF97E-6C59-5B67-8FFA-CF920E74C8AC",
+     "kind": "person",
+     "contactId": "A931BC8C-7B66-56A5-BE83-374A70C757F5",
+     "role": "Koordynator BHP"
+    },
+    {
+     "id": "BA68D43D-4A6B-575E-9F9C-EDC9EE4712B8",
+     "kind": "person",
+     "contactId": "3455F1D5-8898-5910-8725-E79662BA6908",
+     "role": "Kierownik robót konstrukcyjnych"
+    },
+    {
+     "id": "812413CF-A88F-55BA-8C9E-6A11696A3AE0",
+     "kind": "person",
+     "contactId": "5E508635-7568-542F-BD70-59AE6AEF0703",
+     "role": "Kierownik robót elektrycznych"
+    },
+    {
+     "id": "B093EFD9-43C9-5856-8521-807D3FDD891C",
+     "kind": "person",
+     "contactId": "063A7985-847B-5299-9973-6253F267C8AB",
+     "role": "Kierownik robót sanitarnych"
+    },
+    {
+     "id": "809A4386-7E91-530C-9F37-5BD79B25B3A7",
+     "kind": "person",
+     "contactId": "5B1CA38E-C949-51B1-96F3-C1523F69EDFC",
+     "role": "Brygadzista wykończeń"
+    },
+    {
+     "id": "E28B5508-ED1A-5605-9127-E16752A51306",
+     "kind": "person",
+     "contactId": "CBF9FA77-8377-5993-9815-82D38D4C01AD",
+     "role": "Dostawy materiałów"
+    },
+    {
+     "id": "25799649-7383-59FD-8C00-8E6175949FBF",
+     "kind": "person",
+     "contactId": "601603D4-D365-5CCC-874C-E394FA447B1C",
+     "role": "Nadzór autorski — architektura"
+    },
+    {
+     "id": "1EB74301-4791-5507-8912-C630542ED896",
+     "kind": "person",
+     "contactId": "A7521E89-4482-56F0-85F8-8883073B1F2F",
+     "role": "Nadzór autorski — konstrukcja"
+    },
+    {
+     "id": "D8935826-4A3C-5DE9-AFEC-2CD8E9B1E581",
+     "kind": "person",
+     "contactId": "BB6D08F0-C71A-5DFA-B614-BF09870C78BC",
+     "role": "Kierownik robót elewacyjnych"
+    }
+   ],
+   "drawingFolders": [
+    {
+     "id": "EFA7B804-D3D8-5CD1-920A-0B7686F604DA",
+     "parentId": null,
+     "name": "Architektura",
+     "sortOrder": 0
+    },
+    {
+     "id": "711C90DB-7BDE-5EB4-BAC6-720AC33E9EE8",
+     "parentId": "EFA7B804-D3D8-5CD1-920A-0B7686F604DA",
+     "name": "Rzuty",
+     "sortOrder": 0
+    },
+    {
+     "id": "C25961D0-40D5-5DE2-9EF9-BAA5C1623995",
+     "parentId": "EFA7B804-D3D8-5CD1-920A-0B7686F604DA",
+     "name": "Przekroje",
+     "sortOrder": 1
+    },
+    {
+     "id": "EA3B9F2F-D8AE-549E-A6F8-BCD8D15CC40C",
+     "parentId": "EFA7B804-D3D8-5CD1-920A-0B7686F604DA",
+     "name": "Elewacje",
+     "sortOrder": 2
+    },
+    {
+     "id": "BA36BB4C-61C9-51A1-8147-7063EA8EA0C6",
+     "parentId": "EFA7B804-D3D8-5CD1-920A-0B7686F604DA",
+     "name": "Detale",
+     "sortOrder": 3
+    },
+    {
+     "id": "550D47B4-3B59-5E49-B379-C68083ED660E",
+     "parentId": null,
+     "name": "Konstrukcja",
+     "sortOrder": 1
+    },
+    {
+     "id": "15C4CD37-9A05-590D-86DA-8F521DF4C4BA",
+     "parentId": null,
+     "name": "Instalacje sanitarne",
+     "sortOrder": 2
+    },
+    {
+     "id": "D44389BF-F32F-5EC5-9F21-41EFC7AF1167",
+     "parentId": null,
+     "name": "Instalacje elektryczne",
+     "sortOrder": 3
+    },
+    {
+     "id": "D6B65733-61BF-5D71-A3F0-AAD3A712D52B",
+     "parentId": null,
+     "name": "Zagospodarowanie terenu",
+     "sortOrder": 4
+    }
+   ],
+   "drawings": [
+    {
+     "id": "8DDB1A63-15D3-5B25-87C0-C9D5245C67F9",
+     "folderId": "D6B65733-61BF-5D71-A3F0-AAD3A712D52B",
+     "number": "Z-001",
+     "name": "Z-001 Plan zagospodarowania terenu",
+     "resource": "demo-fixture-dwg-z001.pdf",
+     "pageCount": 1,
+     "pageWidth": 1190.55,
+     "pageHeight": 841.89,
+     "revision": "B",
+     "discipline": "Zagospodarowanie terenu",
+     "location": "Działka 123/4",
+     "drawingDate": "2026-03-02",
+     "calibrations": [
+      {
+       "id": "5568B9CB-F992-5DC2-8051-BF271FB914E2",
+       "pageIndex": 0,
+       "ax": 626.93,
+       "ay": 708.54,
+       "bx": 853.7,
+       "by": 708.54,
+       "enteredValue": 40.0,
+       "unit": "m"
+      }
+     ]
+    },
+    {
+     "id": "A3232782-5AD6-5838-A290-C4309B88E4C0",
+     "folderId": "711C90DB-7BDE-5EB4-BAC6-720AC33E9EE8",
+     "number": "A-100",
+     "name": "A-100 Rzut garażu podziemnego",
+     "resource": "demo-fixture-dwg-a100.pdf",
+     "pageCount": 1,
+     "pageWidth": 1190.55,
+     "pageHeight": 841.89,
+     "revision": "B",
+     "discipline": "Architektura",
+     "location": "Garaż podziemny, poziom -1",
+     "drawingDate": "2026-03-20",
+     "calibrations": [
+      {
+       "id": "4DF8362E-42AD-5306-8CF7-936D6AEF88E5",
+       "pageIndex": 0,
+       "ax": 235.04,
+       "ay": 277.32,
+       "bx": 745.28,
+       "by": 277.32,
+       "enteredValue": 36.0,
+       "unit": "m"
+      }
+     ]
+    },
+    {
+     "id": "A358D57A-3314-50A1-98D7-3DD65CB26DFD",
+     "folderId": "711C90DB-7BDE-5EB4-BAC6-720AC33E9EE8",
+     "number": "A-101",
+     "name": "A-101 Rzut parteru",
+     "resource": "demo-fixture-dwg-a101.pdf",
+     "pageCount": 1,
+     "pageWidth": 1190.55,
+     "pageHeight": 841.89,
+     "revision": "C",
+     "discipline": "Architektura",
+     "location": "Budynek A, parter",
+     "drawingDate": "2026-05-12",
+     "calibrations": [
+      {
+       "id": "87D33624-B032-5DD1-ABCA-B705CF89CBE9",
+       "pageIndex": 0,
+       "ax": 90.0,
+       "ay": 273.31,
+       "bx": 1110.47,
+       "by": 273.31,
+       "enteredValue": 36.0,
+       "unit": "m"
+      }
+     ]
+    },
+    {
+     "id": "8A27BE7A-5C42-56A8-B2C4-2502395D6AA4",
+     "folderId": "711C90DB-7BDE-5EB4-BAC6-720AC33E9EE8",
+     "number": "A-102",
+     "name": "A-102 Rzut piętra typowego",
+     "resource": "demo-fixture-dwg-a102.pdf",
+     "pageCount": 1,
+     "pageWidth": 1190.55,
+     "pageHeight": 841.89,
+     "revision": "B",
+     "discipline": "Architektura",
+     "location": "Budynek A, piętra 1–3",
+     "drawingDate": "2026-04-24",
+     "calibrations": [
+      {
+       "id": "EEEEACA0-FCD7-5601-9DCA-AB86459760E3",
+       "pageIndex": 0,
+       "ax": 90.0,
+       "ay": 273.31,
+       "bx": 1110.47,
+       "by": 273.31,
+       "enteredValue": 36.0,
+       "unit": "m"
+      }
+     ]
+    },
+    {
+     "id": "7E0AAA87-9DDD-5E32-8D9D-F12DA24ECCC9",
+     "folderId": "C25961D0-40D5-5DE2-9EF9-BAA5C1623995",
+     "number": "A-201",
+     "name": "A-201 Przekrój A-A",
+     "resource": "demo-fixture-dwg-a201.pdf",
+     "pageCount": 1,
+     "pageWidth": 1190.55,
+     "pageHeight": 841.89,
+     "revision": "A",
+     "discipline": "Architektura",
+     "location": "Budynek A, oś 3/4",
+     "drawingDate": "2026-02-16",
+     "calibrations": []
+    },
+    {
+     "id": "865DB959-5E5B-5475-837D-F9701F75CDDC",
+     "folderId": "EA3B9F2F-D8AE-549E-A6F8-BCD8D15CC40C",
+     "number": "A-301",
+     "name": "A-301 Elewacja południowa",
+     "resource": "demo-fixture-dwg-a301.pdf",
+     "pageCount": 1,
+     "pageWidth": 1190.55,
+     "pageHeight": 841.89,
+     "revision": "B",
+     "discipline": "Architektura",
+     "location": "Budynek A, elewacja S",
+     "drawingDate": "2026-04-08",
+     "calibrations": []
+    },
+    {
+     "id": "B9F12666-100A-5A30-A2A1-537EE5C52070",
+     "folderId": "BA36BB4C-61C9-51A1-8147-7063EA8EA0C6",
+     "number": "A-501",
+     "name": "A-501 Detal D-1 — próg drzwi balkonowych",
+     "resource": "demo-fixture-dwg-a501.pdf",
+     "pageCount": 1,
+     "pageWidth": 1190.55,
+     "pageHeight": 841.89,
+     "revision": "B",
+     "discipline": "Architektura",
+     "location": "Balkony lokali, piętra 1–3",
+     "drawingDate": "2026-04-24",
+     "calibrations": []
+    },
+    {
+     "id": "F09BE882-425E-59FD-B647-EFC80F43D83D",
+     "folderId": "550D47B4-3B59-5E49-B379-C68083ED660E",
+     "number": "K-101",
+     "name": "K-101 Rzut stropu nad parterem",
+     "resource": "demo-fixture-dwg-k101.pdf",
+     "pageCount": 1,
+     "pageWidth": 1190.55,
+     "pageHeight": 841.89,
+     "revision": "B",
+     "discipline": "Konstrukcja",
+     "location": "Budynek A, strop +3,00",
+     "drawingDate": "2026-03-11",
+     "calibrations": [
+      {
+       "id": "5A68802D-97D4-5B2A-9679-1A7854E0BFCC",
+       "pageIndex": 0,
+       "ax": 90.0,
+       "ay": 273.31,
+       "bx": 1110.47,
+       "by": 273.31,
+       "enteredValue": 36.0,
+       "unit": "m"
+      }
+     ]
+    },
+    {
+     "id": "45971268-2282-5A4C-BC7B-31BCD3858F48",
+     "folderId": "15C4CD37-9A05-590D-86DA-8F521DF4C4BA",
+     "number": "S-101",
+     "name": "S-101 Instalacje wod.-kan. — rzut parteru",
+     "resource": "demo-fixture-dwg-s101.pdf",
+     "pageCount": 1,
+     "pageWidth": 1190.55,
+     "pageHeight": 841.89,
+     "revision": "B",
+     "discipline": "Instalacje sanitarne",
+     "location": "Budynek A, parter",
+     "drawingDate": "2026-03-27",
+     "calibrations": []
+    },
+    {
+     "id": "F0514E8A-B3D9-54ED-A8F9-63E2198793D1",
+     "folderId": "15C4CD37-9A05-590D-86DA-8F521DF4C4BA",
+     "number": "S-201",
+     "name": "S-201 Wentylacja mechaniczna — rzut parteru",
+     "resource": "demo-fixture-dwg-s201.pdf",
+     "pageCount": 1,
+     "pageWidth": 1190.55,
+     "pageHeight": 841.89,
+     "revision": "A",
+     "discipline": "Wentylacja i klimatyzacja",
+     "location": "Budynek A, parter",
+     "drawingDate": "2026-03-27",
+     "calibrations": []
+    },
+    {
+     "id": "814BD40B-155A-55DF-BBD5-83C820A7ED66",
+     "folderId": "D44389BF-F32F-5EC5-9F21-41EFC7AF1167",
+     "number": "E-101",
+     "name": "E-101 Instalacje elektryczne — rzut parteru",
+     "resource": "demo-fixture-dwg-e101.pdf",
+     "pageCount": 2,
+     "pageWidth": 1190.55,
+     "pageHeight": 841.89,
+     "revision": "B",
+     "discipline": "Instalacje elektryczne",
+     "location": "Budynek A, parter",
+     "drawingDate": "2026-04-15",
+     "calibrations": []
+    }
+   ],
+   "areas": [
+    {
+     "id": "59771113-C41D-58EE-A045-36BF581C8A7F",
+     "drawingId": "A358D57A-3314-50A1-98D7-3DD65CB26DFD",
+     "pageIndex": 0,
+     "name": "Budynek A — Parter",
+     "color": "#007AFF",
+     "opacity": 0.12,
+     "vertices": [
+      [
+       90.0,
+       330.0
+      ],
+      [
+       1110.47,
+       330.0
+      ],
+      [
+       1110.47,
+       687.17
+      ],
+      [
+       90.0,
+       687.17
+      ]
+     ]
+    },
+    {
+     "id": "9FC206CE-1E87-53D9-B69D-DA905B4D2074",
+     "drawingId": "A358D57A-3314-50A1-98D7-3DD65CB26DFD",
+     "pageIndex": 0,
+     "name": "Klatka schodowa A",
+     "color": "#FF9500",
+     "opacity": 0.3,
+     "vertices": [
+      [
+       501.73,
+       546.14
+      ],
+      [
+       596.69,
+       546.14
+      ],
+      [
+       596.69,
+       674.69
+      ],
+      [
+       501.73,
+       674.69
+      ]
+     ]
+    },
+    {
+     "id": "B33561D3-695E-5604-89B2-22B8C16040E2",
+     "drawingId": "8A27BE7A-5C42-56A8-B2C4-2502395D6AA4",
+     "pageIndex": 0,
+     "name": "Budynek A — Piętro 1",
+     "color": "#007AFF",
+     "opacity": 0.12,
+     "vertices": [
+      [
+       90.0,
+       330.0
+      ],
+      [
+       1110.47,
+       330.0
+      ],
+      [
+       1110.47,
+       687.17
+      ],
+      [
+       90.0,
+       687.17
+      ]
+     ]
+    },
+    {
+     "id": "B95CCF44-61DF-593B-90A7-E003C2C10E4C",
+     "drawingId": "8A27BE7A-5C42-56A8-B2C4-2502395D6AA4",
+     "pageIndex": 0,
+     "name": "Lokal A/12",
+     "color": "#34C759",
+     "opacity": 0.3,
+     "vertices": [
+      [
+       297.64,
+       546.14
+      ],
+      [
+       494.65,
+       546.14
+      ],
+      [
+       494.65,
+       674.69
+      ],
+      [
+       297.64,
+       674.69
+      ]
+     ]
+    },
+    {
+     "id": "796EFB44-8B60-59B3-9910-B1FC1E145828",
+     "drawingId": "8A27BE7A-5C42-56A8-B2C4-2502395D6AA4",
+     "pageIndex": 0,
+     "name": "Lokal A/08 z balkonem",
+     "color": "#AF52DE",
+     "opacity": 0.3,
+     "vertices": [
+      [
+       348.66,
+       342.47
+      ],
+      [
+       475.51,
+       342.47
+      ],
+      [
+       475.51,
+       287.48
+      ],
+      [
+       588.9,
+       287.48
+      ],
+      [
+       588.9,
+       342.47
+      ],
+      [
+       596.69,
+       342.47
+      ],
+      [
+       596.69,
+       488.03
+      ],
+      [
+       348.66,
+       488.03
+      ]
+     ]
+    },
+    {
+     "id": "761D5B45-B413-51C4-B654-9B094C563BA4",
+     "drawingId": "A3232782-5AD6-5838-A290-C4309B88E4C0",
+     "pageIndex": 0,
+     "name": "Garaż podziemny — hala postojowa",
+     "color": "#5AC8FA",
+     "opacity": 0.2,
+     "vertices": [
+      [
+       154.25,
+       339.69
+      ],
+      [
+       826.06,
+       339.69
+      ],
+      [
+       826.06,
+       651.5
+      ],
+      [
+       745.28,
+       651.5
+      ],
+      [
+       745.28,
+       720.94
+      ],
+      [
+       541.18,
+       720.94
+      ],
+      [
+       541.18,
+       651.5
+      ],
+      [
+       439.13,
+       651.5
+      ],
+      [
+       439.13,
+       720.94
+      ],
+      [
+       235.04,
+       720.94
+      ],
+      [
+       235.04,
+       651.5
+      ],
+      [
+       154.25,
+       651.5
+      ]
+     ]
+    },
+    {
+     "id": "3BCCF892-9FC3-5C6F-AE61-D22E692A5FAA",
+     "drawingId": "45971268-2282-5A4C-BC7B-31BCD3858F48",
+     "pageIndex": 0,
+     "name": "Strefa instalacyjna — pom. techniczne 0.18",
+     "color": "#FF3B30",
+     "opacity": 0.3,
+     "vertices": [
+      [
+       297.64,
+       546.14
+      ],
+      [
+       494.65,
+       546.14
+      ],
+      [
+       494.65,
+       674.69
+      ],
+      [
+       297.64,
+       674.69
+      ]
+     ]
+    },
+    {
+     "id": "F4ED6449-A71B-5306-A133-112863D4BEEA",
+     "drawingId": "8DDB1A63-15D3-5B25-87C0-C9D5245C67F9",
+     "pageIndex": 0,
+     "name": "Strefa wjazdu do garażu",
+     "color": "#FF9500",
+     "opacity": 0.3,
+     "vertices": [
+      [
+       422.83,
+       464.76
+      ],
+      [
+       513.54,
+       464.76
+      ],
+      [
+       513.54,
+       529.96
+      ],
+      [
+       422.83,
+       529.96
+      ]
+     ]
+    }
+   ],
+   "issues": [
+    {
+     "id": "FDA840B8-D59E-50D2-86A0-866661D138D4",
+     "number": 1,
+     "drawingId": "A358D57A-3314-50A1-98D7-3DD65CB26DFD",
+     "pageIndex": 0,
+     "x": 459.92,
+     "y": 483.07,
+     "areaId": null,
+     "title": "Niezgodne wymiary otworu drzwiowego — lokal A/02",
+     "details": "Szerokość otworu w świetle ościeżnicy 86 cm zamiast projektowanych 90 cm (A-101 rew. C). Korekta przed montażem drzwi EI30.",
+     "status": "open",
+     "discipline": "Architektura",
+     "contractor": "GB Horyzont Sp. z o.o.",
+     "createdDayOffset": -21,
+     "createdMinute": 580,
+     "photos": []
+    },
+    {
+     "id": "E343B7C1-940A-5B0F-853A-FDC71FF866B5",
+     "number": 2,
+     "drawingId": "A358D57A-3314-50A1-98D7-3DD65CB26DFD",
+     "pageIndex": 0,
+     "x": 749.06,
+     "y": 668.74,
+     "areaId": null,
+     "title": "Uszkodzona krawędź nadproża okna — lokal A/05",
+     "details": "Odspojenie otuliny i odsłonięte zbrojenie na długości ok. 30 cm, rysa ukośna nad oknem. Naprawa zaprawą PCC po oczyszczeniu zbrojenia.",
+     "status": "inProgress",
+     "discipline": "Konstrukcja",
+     "contractor": "Betonex Konstrukcje Sp. z o.o.",
+     "createdDayOffset": -15,
+     "createdMinute": 665,
+     "photos": [
+      {
+       "id": "3D772697-997C-5D62-8D3B-72DF7E3D4D16",
+       "resource": "demo-fixture-photo-a-lintel_crack-0.png",
+       "dayOffset": -15,
+       "minute": 667
+      }
+     ]
+    },
+    {
+     "id": "E7DBD4B9-7123-58FE-8939-BC9066B79F06",
+     "number": 3,
+     "drawingId": "A358D57A-3314-50A1-98D7-3DD65CB26DFD",
+     "pageIndex": 0,
+     "x": 954.57,
+     "y": 525.59,
+     "areaId": "59771113-C41D-58EE-A045-36BF581C8A7F",
+     "title": "Uszkodzenie powłoki malarskiej w korytarzu 0.23",
+     "details": "Zarysowania i odpryski farby na ścianie korytarza na długości ok. 1,2 m po transporcie materiałów.",
+     "status": "open",
+     "discipline": "Roboty wykończeniowe",
+     "contractor": "Pro-Dom Wykończenia Sp. j.",
+     "createdDayOffset": -4,
+     "createdMinute": 860,
+     "photos": [
+      {
+       "id": "4D0C3C4F-AD37-5D1B-B7B2-6F5345952A0B",
+       "resource": "demo-fixture-photo-a-paint_damage-0.png",
+       "dayOffset": -4,
+       "minute": 862
+      }
+     ]
+    },
+    {
+     "id": "9AF71B43-79B4-5195-B1C5-C69B59875AD9",
+     "number": 4,
+     "drawingId": "A358D57A-3314-50A1-98D7-3DD65CB26DFD",
+     "pageIndex": 0,
+     "x": 139.61,
+     "y": 352.68,
+     "areaId": null,
+     "title": "Rysa na tynku przy ościeżu okna — lokal A/01",
+     "details": "Rysa skurczowa przy narożniku ościeża. Naprawiono siatką i masą szpachlową.",
+     "status": "closed",
+     "discipline": "Roboty wykończeniowe",
+     "contractor": "GB Horyzont Sp. z o.o.",
+     "createdDayOffset": -48,
+     "createdMinute": 615,
+     "photos": []
+    },
+    {
+     "id": "C121857D-6BA2-531D-B816-1F8C90B09F64",
+     "number": 5,
+     "drawingId": "A358D57A-3314-50A1-98D7-3DD65CB26DFD",
+     "pageIndex": 0,
+     "x": 177.87,
+     "y": 562.44,
+     "areaId": null,
+     "title": "Brak odbojnicy przy drzwiach wózkowni",
+     "details": "Ściana przy drzwiach wózkowni 0.17 narażona na uszkodzenia. Zamontowano odbojnicę stalową.",
+     "status": "resolved",
+     "discipline": "Architektura",
+     "contractor": "GB Horyzont Sp. z o.o.",
+     "createdDayOffset": -9,
+     "createdMinute": 530,
+     "photos": []
+    },
+    {
+     "id": "AE15031C-D822-5F1E-9730-1965E6A61BC9",
+     "number": 6,
+     "drawingId": "A358D57A-3314-50A1-98D7-3DD65CB26DFD",
+     "pageIndex": 0,
+     "x": 681.02,
+     "y": 668.74,
+     "areaId": null,
+     "title": "Nieszczelność drzwi wejściowych do klatki A",
+     "details": "Przedmuchy na uszczelce przylgowej, drzwi wymagają regulacji samozamykacza i docisku.",
+     "status": "inProgress",
+     "discipline": "Architektura",
+     "contractor": "Lumen Okna i Fasady Sp. z o.o.",
+     "createdDayOffset": -12,
+     "createdMinute": 810,
+     "photos": []
+    },
+    {
+     "id": "25385A15-58AF-564D-AE16-AF5C9D8B8D1F",
+     "number": 7,
+     "drawingId": "A358D57A-3314-50A1-98D7-3DD65CB26DFD",
+     "pageIndex": 0,
+     "x": 549.21,
+     "y": 585.12,
+     "areaId": "9FC206CE-1E87-53D9-B69D-DA905B4D2074",
+     "title": "Brak oznakowania drogi ewakuacyjnej na klatce A",
+     "details": "Brak znaków ewakuacyjnych na biegu schodów i przy wyjściu. Uzupełniono znaki fotoluminescencyjne.",
+     "status": "resolved",
+     "discipline": "BHP",
+     "contractor": "GB Horyzont Sp. z o.o.",
+     "createdDayOffset": -30,
+     "createdMinute": 475,
+     "photos": []
+    },
+    {
+     "id": "0F876A0F-EE4B-56DC-8FAD-3BA13C4036CC",
+     "number": 8,
+     "drawingId": "8A27BE7A-5C42-56A8-B2C4-2502395D6AA4",
+     "pageIndex": 0,
+     "x": 522.28,
+     "y": 337.09,
+     "areaId": "796EFB44-8B60-59B3-9910-B1FC1E145828",
+     "title": "Brak izolacji przeciwwilgociowej przy progu balkonowym — lokal A/08",
+     "details": "Hydroizolacja podpłytkowa zakończona na poziomie progu, brak wywinięcia min. 15 cm na ościeże (detal D-1, ST-04). Ryzyko zawilgocenia wylewki w pokoju dziennym.",
+     "status": "open",
+     "discipline": "Architektura",
+     "contractor": "GB Horyzont Sp. z o.o.",
+     "createdDayOffset": -6,
+     "createdMinute": 610,
+     "photos": [
+      {
+       "id": "08B8C512-1379-5782-B540-52F34C0E19D7",
+       "resource": "demo-fixture-photo-a-balcony_threshold-0.png",
+       "dayOffset": -6,
+       "minute": 612
+      },
+      {
+       "id": "D2031946-4401-5249-B5E4-FDE9DDCC845F",
+       "resource": "demo-fixture-photo-a-balcony_threshold-1.png",
+       "dayOffset": -6,
+       "minute": 613
+      }
+     ]
+    },
+    {
+     "id": "977C2342-8DE1-5BFD-8E2F-4DA7730C8600",
+     "number": 9,
+     "drawingId": "8A27BE7A-5C42-56A8-B2C4-2502395D6AA4",
+     "pageIndex": 0,
+     "x": 316.77,
+     "y": 565.28,
+     "areaId": "B95CCF44-61DF-593B-90A7-E003C2C10E4C",
+     "title": "Nieprawidłowo zamontowany wpust podłogowy — łazienka lokalu A/12",
+     "details": "Korpus wpustu przechylony, kratka powyżej poziomu płytek. Brak kołnierza wklejonego w hydroizolację.",
+     "status": "inProgress",
+     "discipline": "Instalacje sanitarne",
+     "contractor": "AquaTerm Sp. z o.o.",
+     "createdDayOffset": -4,
+     "createdMinute": 565,
+     "photos": [
+      {
+       "id": "F206B7AB-DEFC-5E15-95D6-834B61A70F03",
+       "resource": "demo-fixture-photo-a-floor_drain-0.png",
+       "dayOffset": -4,
+       "minute": 567
+      }
+     ]
+    },
+    {
+     "id": "912973F9-4019-5CE6-ABF8-98C72EB601E5",
+     "number": 10,
+     "drawingId": "8A27BE7A-5C42-56A8-B2C4-2502395D6AA4",
+     "pageIndex": 0,
+     "x": 342.28,
+     "y": 592.2,
+     "areaId": "B95CCF44-61DF-593B-90A7-E003C2C10E4C",
+     "title": "Pęknięta płytka ścienna w łazience lokalu A/12",
+     "details": "Pęknięcie płytki w strefie natrysku, prawdopodobnie pustka pod płytką. Do wymiany.",
+     "status": "open",
+     "discipline": "Roboty wykończeniowe",
+     "contractor": "Pro-Dom Wykończenia Sp. j.",
+     "createdDayOffset": -3,
+     "createdMinute": 900,
+     "photos": []
+    },
+    {
+     "id": "408F2C4C-F6A9-5E56-A182-91ED3120A73B",
+     "number": 11,
+     "drawingId": "8A27BE7A-5C42-56A8-B2C4-2502395D6AA4",
+     "pageIndex": 0,
+     "x": 787.32,
+     "y": 308.74,
+     "areaId": null,
+     "title": "Brak spadku posadzki balkonu — lokal A/09",
+     "details": "Po próbie wodnej zastoisko wody przy balustradzie. Spadek poniżej 1,5%.",
+     "status": "open",
+     "discipline": "Architektura",
+     "contractor": "GB Horyzont Sp. z o.o.",
+     "createdDayOffset": -10,
+     "createdMinute": 765,
+     "photos": []
+    },
+    {
+     "id": "37F7A9BE-700C-5400-9FB3-B0D830EDC976",
+     "number": 12,
+     "drawingId": "8A27BE7A-5C42-56A8-B2C4-2502395D6AA4",
+     "pageIndex": 0,
+     "x": 953.15,
+     "y": 668.74,
+     "areaId": null,
+     "title": "Uszkodzona szyba w oknie pokoju — lokal A/14",
+     "details": "Rysa na szybie zewnętrznej pakietu. Zamówiono nowy pakiet szybowy.",
+     "status": "inProgress",
+     "discipline": "Architektura",
+     "contractor": "Lumen Okna i Fasady Sp. z o.o.",
+     "createdDayOffset": -14,
+     "createdMinute": 515,
+     "photos": []
+    },
+    {
+     "id": "A71CBF5E-B8BD-550A-8F5A-9F026E76ED18",
+     "number": 13,
+     "drawingId": "8A27BE7A-5C42-56A8-B2C4-2502395D6AA4",
+     "pageIndex": 0,
+     "x": 237.4,
+     "y": 624.8,
+     "areaId": null,
+     "title": "Brak dylatacji obwodowej wylewki — lokal A/11",
+     "details": "Wylewka przylega bezpośrednio do ścian. Wykonano nacięcia i wypełnienie dylatacji.",
+     "status": "closed",
+     "discipline": "Roboty wykończeniowe",
+     "contractor": "Pro-Dom Wykończenia Sp. j.",
+     "createdDayOffset": -40,
+     "createdMinute": 680,
+     "photos": []
+    },
+    {
+     "id": "132A88DA-8AFC-540B-94FA-CE9B30E0F833",
+     "number": 14,
+     "drawingId": "8A27BE7A-5C42-56A8-B2C4-2502395D6AA4",
+     "pageIndex": 0,
+     "x": 277.09,
+     "y": 293.15,
+     "areaId": null,
+     "title": "Niedokręcona balustrada balkonu — lokal A/07",
+     "details": "Luz na dwóch mocowaniach balustrady szklanej. Dokręcono i zabezpieczono.",
+     "status": "resolved",
+     "discipline": "BHP",
+     "contractor": "Lumen Okna i Fasady Sp. z o.o.",
+     "createdDayOffset": -19,
+     "createdMinute": 845,
+     "photos": []
+    },
+    {
+     "id": "E02F99C0-282F-5AF0-9776-D6D46CF572B7",
+     "number": 15,
+     "drawingId": "A3232782-5AD6-5838-A290-C4309B88E4C0",
+     "pageIndex": 0,
+     "x": 417.87,
+     "y": 484.25,
+     "areaId": "761D5B45-B413-51C4-B654-9B094C563BA4",
+     "title": "Zarysowanie posadzki żywicznej przy słupie 3/B",
+     "details": "Rysa długości ok. 1,5 m, rozwartość do 0,3 mm. Do oceny projektanta konstrukcji.",
+     "status": "open",
+     "discipline": "Konstrukcja",
+     "contractor": "Betonex Konstrukcje Sp. z o.o.",
+     "createdDayOffset": -11,
+     "createdMinute": 600,
+     "photos": []
+    },
+    {
+     "id": "E7A930F8-D279-5F16-9147-89CFEF754FA7",
+     "number": 16,
+     "drawingId": "A3232782-5AD6-5838-A290-C4309B88E4C0",
+     "pageIndex": 0,
+     "x": 518.5,
+     "y": 531.02,
+     "areaId": "761D5B45-B413-51C4-B654-9B094C563BA4",
+     "title": "Brak oznakowania miejsc postojowych P17–P24",
+     "details": "Linie i numeracja miejsc niewykonane po naprawie posadzki.",
+     "status": "inProgress",
+     "discipline": "Roboty wykończeniowe",
+     "contractor": "GB Horyzont Sp. z o.o.",
+     "createdDayOffset": -18,
+     "createdMinute": 790,
+     "photos": []
+    },
+    {
+     "id": "D67BBAE3-833F-51B4-844C-6837B2757206",
+     "number": 17,
+     "drawingId": "A3232782-5AD6-5838-A290-C4309B88E4C0",
+     "pageIndex": 0,
+     "x": 213.78,
+     "y": 608.98,
+     "areaId": "761D5B45-B413-51C4-B654-9B094C563BA4",
+     "title": "Przeciek przez dylatację stropu nad garażem",
+     "details": "Ślady przecieku na stropie po opadach. Do sprawdzenia taśma dylatacyjna w stropodachu dziedzińca.",
+     "status": "open",
+     "discipline": "Konstrukcja",
+     "contractor": "Betonex Konstrukcje Sp. z o.o.",
+     "createdDayOffset": -7,
+     "createdMinute": 545,
+     "photos": []
+    },
+    {
+     "id": "0D98B36A-DD95-5879-8740-A8D9B2A89996",
+     "number": 18,
+     "drawingId": "A3232782-5AD6-5838-A290-C4309B88E4C0",
+     "pageIndex": 0,
+     "x": 755.2,
+     "y": 485.67,
+     "areaId": null,
+     "title": "Uszkodzona krawędź słupa przy wjeździe na rampę",
+     "details": "Obicie krawędzi słupa przez pojazd. Naprawiono i zamontowano osłonę narożnika.",
+     "status": "resolved",
+     "discipline": "Konstrukcja",
+     "contractor": "Betonex Konstrukcje Sp. z o.o.",
+     "createdDayOffset": -33,
+     "createdMinute": 960,
+     "photos": []
+    },
+    {
+     "id": "A1519868-D7CB-5B8E-ADD9-86E3D05707C9",
+     "number": 19,
+     "drawingId": "F09BE882-425E-59FD-B647-EFC80F43D83D",
+     "pageIndex": 0,
+     "x": 316.77,
+     "y": 338.5,
+     "areaId": null,
+     "title": "Odsłonięte zbrojenie w wieńcu stropu — oś A/2–3",
+     "details": "Raki i odsłonięte strzemiona wieńca po rozdeskowaniu. Naprawiono zaprawą PCC.",
+     "status": "closed",
+     "discipline": "Konstrukcja",
+     "contractor": "Betonex Konstrukcje Sp. z o.o.",
+     "createdDayOffset": -150,
+     "createdMinute": 630,
+     "photos": []
+    },
+    {
+     "id": "6F200AD5-8238-5ACD-BC1D-8623A3C8E240",
+     "number": 20,
+     "drawingId": "F09BE882-425E-59FD-B647-EFC80F43D83D",
+     "pageIndex": 0,
+     "x": 343.7,
+     "y": 559.61,
+     "areaId": null,
+     "title": "Otwór w stropie pod pion K6 przesunięty względem projektu",
+     "details": "Otwór pod pion kanalizacyjny lokalu A/12 wykonany ok. 20 cm od lokalizacji projektowej. Do decyzji projektanta: poszerzenie otworu lub korekta trasy pionu.",
+     "status": "open",
+     "discipline": "Konstrukcja",
+     "contractor": "Betonex Konstrukcje Sp. z o.o.",
+     "createdDayOffset": -26,
+     "createdMinute": 700,
+     "photos": []
+    },
+    {
+     "id": "211968AF-6387-505D-B5A8-85FF64D16191",
+     "number": 21,
+     "drawingId": "45971268-2282-5A4C-BC7B-31BCD3858F48",
+     "pageIndex": 0,
+     "x": 407.48,
+     "y": 553.94,
+     "areaId": "3BCCF892-9FC3-5C6F-AE61-D22E692A5FAA",
+     "title": "Brak uszczelnienia przejścia instalacyjnego przez ścianę EI60",
+     "details": "Trzy przejścia rur z pomieszczenia technicznego do korytarza bez uszczelnień ogniochronnych (notatka z narady nr 14, pkt 14.3).",
+     "status": "open",
+     "discipline": "Instalacje sanitarne",
+     "contractor": "AquaTerm Sp. z o.o.",
+     "createdDayOffset": -9,
+     "createdMinute": 650,
+     "photos": []
+    },
+    {
+     "id": "AD11E7AB-BAB6-5044-9A2D-9F78FD99F917",
+     "number": 22,
+     "drawingId": "45971268-2282-5A4C-BC7B-31BCD3858F48",
+     "pageIndex": 0,
+     "x": 444.33,
+     "y": 621.97,
+     "areaId": "3BCCF892-9FC3-5C6F-AE61-D22E692A5FAA",
+     "title": "Brak izolacji termicznej rur c.w.u. w pomieszczeniu technicznym",
+     "details": "Odcinek ok. 2 m rury c.w.u. przy zasobniku bez otuliny.",
+     "status": "inProgress",
+     "discipline": "Instalacje sanitarne",
+     "contractor": "AquaTerm Sp. z o.o.",
+     "createdDayOffset": -8,
+     "createdMinute": 735,
+     "photos": []
+    },
+    {
+     "id": "9A70EF61-776C-5EAB-9AA8-222BBF947C64",
+     "number": 23,
+     "drawingId": "45971268-2282-5A4C-BC7B-31BCD3858F48",
+     "pageIndex": 0,
+     "x": 418.82,
+     "y": 471.73,
+     "areaId": null,
+     "title": "Kolizja pionu kanalizacyjnego PK2 z nadprożem",
+     "details": "Pion PK2 kolidował z nadprożem drzwi łazienki. Zmieniono trasę odejścia.",
+     "status": "resolved",
+     "discipline": "Instalacje sanitarne",
+     "contractor": "AquaTerm Sp. z o.o.",
+     "createdDayOffset": -16,
+     "createdMinute": 575,
+     "photos": []
+    },
+    {
+     "id": "024368B0-55A1-5D5A-8FD2-840F9610FDB1",
+     "number": 24,
+     "drawingId": "F0514E8A-B3D9-54ED-A8F9-63E2198793D1",
+     "pageIndex": 0,
+     "x": 756.14,
+     "y": 507.17,
+     "areaId": null,
+     "title": "Kolizja przewodu wentylacyjnego z instalacją elektryczną",
+     "details": "Kanał nawiewny 400×200 koliduje z korytem kablowym 200×60 w osi 5. Ustalenie 14.1: obniżenie koryta o 15 cm.",
+     "status": "open",
+     "discipline": "Wentylacja i klimatyzacja",
+     "contractor": "AquaTerm Sp. z o.o.",
+     "createdDayOffset": -5,
+     "createdMinute": 660,
+     "photos": [
+      {
+       "id": "C4FF7487-6AFD-5614-BB9F-06332D08439A",
+       "resource": "demo-fixture-photo-a-duct_collision-0.png",
+       "dayOffset": -5,
+       "minute": 662
+      }
+     ]
+    },
+    {
+     "id": "C769048B-978B-5393-A899-FDD2DAB83DC8",
+     "number": 25,
+     "drawingId": "F0514E8A-B3D9-54ED-A8F9-63E2198793D1",
+     "pageIndex": 0,
+     "x": 715.04,
+     "y": 487.32,
+     "areaId": null,
+     "title": "Brak klapy przeciwpożarowej na przejściu do lokalu A/03",
+     "details": "Przejście kanału Ø125 przez ścianę korytarza bez klapy KPP.",
+     "status": "inProgress",
+     "discipline": "Wentylacja i klimatyzacja",
+     "contractor": "AquaTerm Sp. z o.o.",
+     "createdDayOffset": -12,
+     "createdMinute": 880,
+     "photos": []
+    },
+    {
+     "id": "AB61D626-0634-54C6-ACB5-95C3D6F445DF",
+     "number": 26,
+     "drawingId": "814BD40B-155A-55DF-BBD5-83C820A7ED66",
+     "pageIndex": 0,
+     "x": 549.21,
+     "y": 613.46,
+     "areaId": null,
+     "title": "Brak opraw oświetlenia awaryjnego na klatce schodowej A",
+     "details": "Wynik negatywny w protokole PE-01. Oprawy AW do montażu przed odbiorem.",
+     "status": "open",
+     "discipline": "Instalacje elektryczne",
+     "contractor": "Elektro-Volt Instalacje s.c.",
+     "createdDayOffset": -2,
+     "createdMinute": 625,
+     "photos": []
+    },
+    {
+     "id": "3AF29DEE-C26E-5B32-AA10-CCC11E6DABAC",
+     "number": 27,
+     "drawingId": "814BD40B-155A-55DF-BBD5-83C820A7ED66",
+     "pageIndex": 0,
+     "x": 702.85,
+     "y": 467.48,
+     "areaId": null,
+     "title": "Niezgodna wysokość montażu łącznika — lokal A/03",
+     "details": "Łącznik zamontowany na wysokości 1,40 m zamiast 1,10 m. Przełożono.",
+     "status": "closed",
+     "discipline": "Instalacje elektryczne",
+     "contractor": "Elektro-Volt Instalacje s.c.",
+     "createdDayOffset": -35,
+     "createdMinute": 795,
+     "photos": []
+    },
+    {
+     "id": "A51A9940-676A-5B52-A189-898F9618772E",
+     "number": 28,
+     "drawingId": "814BD40B-155A-55DF-BBD5-83C820A7ED66",
+     "pageIndex": 1,
+     "x": 316.77,
+     "y": 579.45,
+     "areaId": null,
+     "title": "Brak oznaczenia przewodów w rozdzielnicy RG",
+     "details": "Przewody odpływowe bez oznaczeń, brak aktualnego schematu w drzwiach rozdzielnicy (PE-01, pkt 3).",
+     "status": "inProgress",
+     "discipline": "Instalacje elektryczne",
+     "contractor": "Elektro-Volt Instalacje s.c.",
+     "createdDayOffset": -2,
+     "createdMinute": 690,
+     "photos": [
+      {
+       "id": "AD0FE1E6-BB3B-5DB2-B4AB-64812384E80D",
+       "resource": "demo-fixture-photo-a-switchboard-0.png",
+       "dayOffset": -2,
+       "minute": 692
+      }
+     ]
+    },
+    {
+     "id": "61A1345E-D43D-5AD0-A12D-645A1A956B40",
+     "number": 29,
+     "drawingId": "814BD40B-155A-55DF-BBD5-83C820A7ED66",
+     "pageIndex": 1,
+     "x": 147.83,
+     "y": 444.8,
+     "areaId": null,
+     "title": "Gniazdo w łazience lokalu A/01 bez klasy szczelności IP44",
+     "details": "Zamontowano gniazdo IP20 w strefie łazienki. Do wymiany na IP44.",
+     "status": "open",
+     "discipline": "Instalacje elektryczne",
+     "contractor": "Elektro-Volt Instalacje s.c.",
+     "createdDayOffset": -2,
+     "createdMinute": 705,
+     "photos": []
+    },
+    {
+     "id": "5E2D1F2C-3271-56A1-850D-D1D2F2A7B3E8",
+     "number": 30,
+     "drawingId": "865DB959-5E5B-5475-837D-F9701F75CDDC",
+     "pageIndex": 0,
+     "x": 866.69,
+     "y": 512.6,
+     "areaId": null,
+     "title": "Ubytki w warstwie zbrojonej ocieplenia — oś 5–6",
+     "details": "Odsłonięte płyty EPS i brak siatki na powierzchni ok. 1 m². Uzupełnić przed tynkowaniem.",
+     "status": "open",
+     "discipline": "Architektura",
+     "contractor": "Lumen Okna i Fasady Sp. z o.o.",
+     "createdDayOffset": -6,
+     "createdMinute": 720,
+     "photos": [
+      {
+       "id": "8A637F52-19E7-578C-B648-3C9DB81C200D",
+       "resource": "demo-fixture-photo-a-facade-0.png",
+       "dayOffset": -6,
+       "minute": 722
+      }
+     ]
+    },
+    {
+     "id": "2393032E-D08B-50F1-B569-8742DEBBA992",
+     "number": 31,
+     "drawingId": "865DB959-5E5B-5475-837D-F9701F75CDDC",
+     "pageIndex": 0,
+     "x": 394.72,
+     "y": 494.17,
+     "areaId": null,
+     "title": "Brak obróbki blacharskiej parapetu — okno lokalu A/16",
+     "details": "Parapet zewnętrzny niezamontowany, woda spływa po ociepleniu.",
+     "status": "inProgress",
+     "discipline": "Architektura",
+     "contractor": "Lumen Okna i Fasady Sp. z o.o.",
+     "createdDayOffset": -13,
+     "createdMinute": 620,
+     "photos": []
+    },
+    {
+     "id": "FFF17325-BEC5-5EDF-9055-296F62B9C7B4",
+     "number": 32,
+     "drawingId": "8DDB1A63-15D3-5B25-87C0-C9D5245C67F9",
+     "pageIndex": 0,
+     "x": 507.87,
+     "y": 487.44,
+     "areaId": "F4ED6449-A71B-5306-A133-112863D4BEEA",
+     "title": "Uszkodzony krawężnik przy zjeździe do garażu",
+     "details": "Pęknięty i przesunięty krawężnik na łuku drogi przy rampie.",
+     "status": "open",
+     "discipline": "Zagospodarowanie terenu",
+     "contractor": "Zieleń-Tech Sp. z o.o.",
+     "createdDayOffset": -8,
+     "createdMinute": 910,
+     "photos": []
+    },
+    {
+     "id": "3DCA61BE-A9CE-58C2-8619-027BE4175C8D",
+     "number": 33,
+     "drawingId": "8DDB1A63-15D3-5B25-87C0-C9D5245C67F9",
+     "pageIndex": 0,
+     "x": 116.69,
+     "y": 533.93,
+     "areaId": null,
+     "title": "Brak zabezpieczenia wykopu przy przyłączu wod.-kan.",
+     "details": "Wykop głębokości ok. 1,6 m bez barier i oznakowania. Zabezpieczono barierami.",
+     "status": "resolved",
+     "discipline": "BHP",
+     "contractor": "GB Horyzont Sp. z o.o.",
+     "createdDayOffset": -60,
+     "createdMinute": 490,
+     "photos": []
+    },
+    {
+     "id": "6D6E00C7-C3D2-5DEB-8FC1-4503A59A3535",
+     "number": 34,
+     "drawingId": "7E0AAA87-9DDD-5E32-8D9D-F12DA24ECCC9",
+     "pageIndex": 0,
+     "x": 906.14,
+     "y": 695.67,
+     "areaId": null,
+     "title": "Niezgodna wysokość attyki z projektem",
+     "details": "Attyka od strony północnej niższa o ok. 6 cm od rzędnej +13,20. Do decyzji projektanta.",
+     "status": "open",
+     "discipline": "Architektura",
+     "contractor": "GB Horyzont Sp. z o.o.",
+     "createdDayOffset": -20,
+     "createdMinute": 555,
+     "photos": []
+    },
+    {
+     "id": "C6A0E507-4C1B-5B6D-9A93-4EB288BA9ADC",
+     "number": 35,
+     "drawingId": "B9F12666-100A-5A30-A2A1-537EE5C52070",
+     "pageIndex": 0,
+     "x": 455.62,
+     "y": 579.45,
+     "areaId": null,
+     "title": "Hydroizolacja wywinięta poniżej 15 cm — próg balkonowy",
+     "details": "Wywinięcie hydroizolacji ok. 8 cm w lokalach A/08 i A/16. Wymagane min. 15 cm wg detalu D-1.",
+     "status": "inProgress",
+     "discipline": "Architektura",
+     "contractor": "GB Horyzont Sp. z o.o.",
+     "createdDayOffset": -6,
+     "createdMinute": 630,
+     "photos": []
+    }
+   ],
+   "photoAlbums": [
+    {
+     "id": "7CF93E40-91CA-5685-ADC1-D7B099C8D9B2",
+     "name": "Postęp robót",
+     "sortOrder": 0
+    },
+    {
+     "id": "4A0C9992-6786-5140-BF31-271F663A9B29",
+     "name": "Usterki",
+     "sortOrder": 1
+    },
+    {
+     "id": "025E62B9-99CD-5562-9DA1-648387000FEB",
+     "name": "Garaż podziemny",
+     "sortOrder": 2
+    },
+    {
+     "id": "9B06ABA1-58CE-5C8D-BCAC-2D4E790203BB",
+     "name": "Instalacje",
+     "sortOrder": 3
+    }
+   ],
+   "photos": [
+    {
+     "id": "BADC67E6-549E-56B2-8CAD-BBB6372BF6E7",
+     "resource": "demo-fixture-photo-a-excavation-0.png",
+     "albumId": "7CF93E40-91CA-5685-ADC1-D7B099C8D9B2",
+     "title": "Wykop i ścianka berlińska — strona wschodnia",
+     "description": "Zabezpieczenie wykopu przed rozpoczęciem płyty fundamentowej.",
+     "takenDayOffset": -290,
+     "takenMinute": 660,
+     "drawingId": null,
+     "pageIndex": null,
+     "areaId": null,
+     "issueId": null
+    },
+    {
+     "id": "EBDE24EC-693B-590C-A570-856EF951AC6A",
+     "resource": "demo-fixture-photo-a-formwork-0.png",
+     "albumId": "7CF93E40-91CA-5685-ADC1-D7B099C8D9B2",
+     "title": "Zbrojenie płyty fundamentowej",
+     "description": "Stan przed betonowaniem — odbiór zbrojenia przez inspektora nadzoru.",
+     "takenDayOffset": -240,
+     "takenMinute": 570,
+     "drawingId": null,
+     "pageIndex": null,
+     "areaId": null,
+     "issueId": null
+    },
+    {
+     "id": "2A054C7E-8D9D-56DF-B59A-F42986FFC180",
+     "resource": "demo-fixture-photo-a-formwork-1.png",
+     "albumId": "7CF93E40-91CA-5685-ADC1-D7B099C8D9B2",
+     "title": "Zbrojenie stropu nad parterem",
+     "description": "Kontrola otuliny i rozstawu prętów przed betonowaniem stropu.",
+     "takenDayOffset": -170,
+     "takenMinute": 600,
+     "drawingId": "F09BE882-425E-59FD-B647-EFC80F43D83D",
+     "pageIndex": 0,
+     "areaId": null,
+     "issueId": null
+    },
+    {
+     "id": "521E0630-340E-53BC-BE31-26E463B50A30",
+     "resource": "demo-fixture-photo-a-site-0.png",
+     "albumId": "7CF93E40-91CA-5685-ADC1-D7B099C8D9B2",
+     "title": "Widok ogólny — konstrukcja dwóch kondygnacji",
+     "description": "Stan robót od strony dziedzińca.",
+     "takenDayOffset": -150,
+     "takenMinute": 720,
+     "drawingId": null,
+     "pageIndex": null,
+     "areaId": null,
+     "issueId": null
+    },
+    {
+     "id": "20333ADB-3D4A-5449-8F86-820B75149628",
+     "resource": "demo-fixture-photo-a-site-1.png",
+     "albumId": "7CF93E40-91CA-5685-ADC1-D7B099C8D9B2",
+     "title": "Widok ogólny — konstrukcja zakończona",
+     "description": "Żuraw przed demontażem, rozpoczęte ścianki działowe.",
+     "takenDayOffset": -110,
+     "takenMinute": 750,
+     "drawingId": null,
+     "pageIndex": null,
+     "areaId": null,
+     "issueId": null
+    },
+    {
+     "id": "F33BF641-9209-52FC-9936-414EF2796C1E",
+     "resource": "demo-fixture-photo-a-masonry-0.png",
+     "albumId": "7CF93E40-91CA-5685-ADC1-D7B099C8D9B2",
+     "title": "Ścianki działowe — piętro 1",
+     "description": "Murowanie ścianek z bloczków silikatowych 12 cm.",
+     "takenDayOffset": -95,
+     "takenMinute": 540,
+     "drawingId": "8A27BE7A-5C42-56A8-B2C4-2502395D6AA4",
+     "pageIndex": 0,
+     "areaId": "B33561D3-695E-5604-89B2-22B8C16040E2",
+     "issueId": null
+    },
+    {
+     "id": "128B3741-C5CB-5BFF-8432-AF6720C4BC77",
+     "resource": "demo-fixture-photo-a-staircase-0.png",
+     "albumId": "7CF93E40-91CA-5685-ADC1-D7B099C8D9B2",
+     "title": "Klatka schodowa A — biegi po montażu",
+     "description": "Schody prefabrykowane, przed montażem balustrad.",
+     "takenDayOffset": -60,
+     "takenMinute": 780,
+     "drawingId": "A358D57A-3314-50A1-98D7-3DD65CB26DFD",
+     "pageIndex": 0,
+     "areaId": "9FC206CE-1E87-53D9-B69D-DA905B4D2074",
+     "issueId": null
+    },
+    {
+     "id": "E5376BAF-9B5C-54CE-9A28-FFE64B5D2EA6",
+     "resource": "demo-fixture-photo-a-site-2.png",
+     "albumId": "7CF93E40-91CA-5685-ADC1-D7B099C8D9B2",
+     "title": "Widok ogólny od strony dziedzińca",
+     "description": "Aktualny stan budowy: elewacja w trakcie, instalacje wewnętrzne.",
+     "takenDayOffset": -3,
+     "takenMinute": 900,
+     "drawingId": null,
+     "pageIndex": null,
+     "areaId": null,
+     "issueId": null
+    },
+    {
+     "id": "FFF7BCA7-FE35-5AF5-92DE-4B9FEECC1B96",
+     "resource": "demo-fixture-photo-a-pipe_penetration-0.png",
+     "albumId": "4A0C9992-6786-5140-BF31-271F663A9B29",
+     "title": "Nieuszczelnione przejście rury przez ścianę EI60",
+     "description": "Pomieszczenie techniczne 0.18, ściana od strony korytarza.",
+     "takenDayOffset": -9,
+     "takenMinute": 652,
+     "drawingId": "45971268-2282-5A4C-BC7B-31BCD3858F48",
+     "pageIndex": 0,
+     "areaId": "3BCCF892-9FC3-5C6F-AE61-D22E692A5FAA",
+     "issueId": "211968AF-6387-505D-B5A8-85FF64D16191"
+    },
+    {
+     "id": "46EDE826-1B6D-5282-BB54-04370C9C3D3B",
+     "resource": "demo-fixture-photo-a-tech_room-0.png",
+     "albumId": "4A0C9992-6786-5140-BF31-271F663A9B29",
+     "title": "Rura c.w.u. bez izolacji termicznej",
+     "description": "Odcinek przy zasobniku c.w.u.",
+     "takenDayOffset": -8,
+     "takenMinute": 737,
+     "drawingId": "45971268-2282-5A4C-BC7B-31BCD3858F48",
+     "pageIndex": 0,
+     "areaId": "3BCCF892-9FC3-5C6F-AE61-D22E692A5FAA",
+     "issueId": "AD11E7AB-BAB6-5044-9A2D-9F78FD99F917"
+    },
+    {
+     "id": "8790A590-EDF7-59EC-BE9B-9628BA15FDCC",
+     "resource": "demo-fixture-photo-a-door_opening-0.png",
+     "albumId": "4A0C9992-6786-5140-BF31-271F663A9B29",
+     "title": "Pomiar szerokości otworu drzwiowego — lokal A/02",
+     "description": "Szerokość w świetle 86 cm (projekt: 90 cm).",
+     "takenDayOffset": -21,
+     "takenMinute": 582,
+     "drawingId": "A358D57A-3314-50A1-98D7-3DD65CB26DFD",
+     "pageIndex": 0,
+     "areaId": null,
+     "issueId": "FDA840B8-D59E-50D2-86A0-866661D138D4"
+    },
+    {
+     "id": "44838619-D3C6-507C-A35E-1DE038B77D16",
+     "resource": "demo-fixture-photo-a-lintel_crack-1.png",
+     "albumId": "4A0C9992-6786-5140-BF31-271F663A9B29",
+     "title": "Nadproże okna lokalu A/05 — widok ogólny",
+     "description": "Zakres uszkodzenia przed naprawą.",
+     "takenDayOffset": -15,
+     "takenMinute": 668,
+     "drawingId": "A358D57A-3314-50A1-98D7-3DD65CB26DFD",
+     "pageIndex": 0,
+     "areaId": null,
+     "issueId": "E343B7C1-940A-5B0F-853A-FDC71FF866B5"
+    },
+    {
+     "id": "5DEA16B5-8794-5191-8CA3-0BB7BD41C974",
+     "resource": "demo-fixture-photo-a-facade-1.png",
+     "albumId": "4A0C9992-6786-5140-BF31-271F663A9B29",
+     "title": "Elewacja — ubytki warstwy zbrojonej (oś 5–6)",
+     "description": "Widok z rusztowania, poziom piętra 2.",
+     "takenDayOffset": -6,
+     "takenMinute": 723,
+     "drawingId": "865DB959-5E5B-5475-837D-F9701F75CDDC",
+     "pageIndex": 0,
+     "areaId": null,
+     "issueId": "5E2D1F2C-3271-56A1-850D-D1D2F2A7B3E8"
+    },
+    {
+     "id": "095A83AC-4999-5DFC-B27C-ED243B3BEBE6",
+     "resource": "demo-fixture-photo-a-garage-0.png",
+     "albumId": "4A0C9992-6786-5140-BF31-271F663A9B29",
+     "title": "Zarysowanie posadzki przy słupie 3/B",
+     "description": "Rysa w posadzce żywicznej, widok w kierunku rampy.",
+     "takenDayOffset": -11,
+     "takenMinute": 602,
+     "drawingId": "A3232782-5AD6-5838-A290-C4309B88E4C0",
+     "pageIndex": 0,
+     "areaId": "761D5B45-B413-51C4-B654-9B094C563BA4",
+     "issueId": "E02F99C0-282F-5AF0-9776-D6D46CF572B7"
+    },
+    {
+     "id": "C7E0FA79-ADF4-575F-80AC-A9703D2A9619",
+     "resource": "demo-fixture-photo-a-garage-1.png",
+     "albumId": "025E62B9-99CD-5562-9DA1-648387000FEB",
+     "title": "Hala garażowa — oznakowanie w trakcie",
+     "description": "Malowanie linii miejsc postojowych.",
+     "takenDayOffset": -18,
+     "takenMinute": 792,
+     "drawingId": "A3232782-5AD6-5838-A290-C4309B88E4C0",
+     "pageIndex": 0,
+     "areaId": "761D5B45-B413-51C4-B654-9B094C563BA4",
+     "issueId": null
+    },
+    {
+     "id": "2248B1AB-016F-5DC2-A98C-A2B6101D1ADE",
+     "resource": "demo-fixture-photo-a-pipe_penetration-1.png",
+     "albumId": "025E62B9-99CD-5562-9DA1-648387000FEB",
+     "title": "Przejścia instalacyjne — ściana pompowni",
+     "description": "Przejścia rur przez ścianę pompowni -1.02.",
+     "takenDayOffset": -25,
+     "takenMinute": 840,
+     "drawingId": "A3232782-5AD6-5838-A290-C4309B88E4C0",
+     "pageIndex": 0,
+     "areaId": null,
+     "issueId": null
+    },
+    {
+     "id": "5A16D7D0-2BB8-52CA-AB89-4D01B7BD576A",
+     "resource": "demo-fixture-photo-a-switchboard-1.png",
+     "albumId": "9B06ABA1-58CE-5C8D-BCAC-2D4E790203BB",
+     "title": "Rozdzielnica RG — opisy częściowo uzupełnione",
+     "description": "Stan po pierwszej części opisów obwodów.",
+     "takenDayOffset": -2,
+     "takenMinute": 695,
+     "drawingId": "814BD40B-155A-55DF-BBD5-83C820A7ED66",
+     "pageIndex": 1,
+     "areaId": null,
+     "issueId": "A51A9940-676A-5B52-A189-898F9618772E"
+    },
+    {
+     "id": "AE75666F-0557-5F90-A22E-4FD0129CDF66",
+     "resource": "demo-fixture-photo-a-duct_collision-1.png",
+     "albumId": "9B06ABA1-58CE-5C8D-BCAC-2D4E790203BB",
+     "title": "Kolizja kanału wentylacyjnego z korytem kablowym",
+     "description": "Widok od dołu, korytarz parteru w osi 5.",
+     "takenDayOffset": -5,
+     "takenMinute": 662,
+     "drawingId": "F0514E8A-B3D9-54ED-A8F9-63E2198793D1",
+     "pageIndex": 0,
+     "areaId": null,
+     "issueId": "024368B0-55A1-5D5A-8FD2-840F9610FDB1"
+    },
+    {
+     "id": "053CFCD9-859C-5AD2-9189-D73C63F3A2BD",
+     "resource": "demo-fixture-photo-a-tech_room-1.png",
+     "albumId": "9B06ABA1-58CE-5C8D-BCAC-2D4E790203BB",
+     "title": "Węzeł cieplny — stan montażu",
+     "description": "Montaż armatury i zasobnika c.w.u.",
+     "takenDayOffset": -30,
+     "takenMinute": 640,
+     "drawingId": "45971268-2282-5A4C-BC7B-31BCD3858F48",
+     "pageIndex": 0,
+     "areaId": "3BCCF892-9FC3-5C6F-AE61-D22E692A5FAA",
+     "issueId": null
+    },
+    {
+     "id": "81141D4D-48FE-55ED-AEE1-4D1E56E48C25",
+     "resource": "demo-fixture-photo-a-floor_drain-1.png",
+     "albumId": "9B06ABA1-58CE-5C8D-BCAC-2D4E790203BB",
+     "title": "Wpust podłogowy w łazience lokalu A/12",
+     "description": "Widok po ułożeniu płytek.",
+     "takenDayOffset": -4,
+     "takenMinute": 567,
+     "drawingId": "8A27BE7A-5C42-56A8-B2C4-2502395D6AA4",
+     "pageIndex": 0,
+     "areaId": "B95CCF44-61DF-593B-90A7-E003C2C10E4C",
+     "issueId": "977C2342-8DE1-5BFD-8E2F-4DA7730C8600"
+    }
+   ],
+   "schedule": {
+    "id": "27D27CD3-AA85-53B9-BD9E-BC8AFEC6B456",
+    "name": "Harmonogram realizacji — Etap I",
+    "details": "Harmonogram ramowy budynku A (dane demonstracyjne).",
+    "phases": [
+     {
+      "id": "D033BA28-A483-5DB8-AB10-28FB4446C101",
+      "name": "Roboty ziemne",
+      "color": "#7A8794",
+      "sortOrder": 0
+     },
+     {
+      "id": "61553104-E1F9-5DB9-A053-151D958DCD63",
+      "name": "Konstrukcja",
+      "color": "#1C7AE6",
+      "sortOrder": 1
+     },
+     {
+      "id": "EFDC783C-D817-5F0A-8BAC-C3FFF3183B1C",
+      "name": "Stan surowy",
+      "color": "#8E5BD6",
+      "sortOrder": 2
+     },
+     {
+      "id": "330D952D-A1F8-5CBC-B8F0-876A6B97B242",
+      "name": "Instalacje",
+      "color": "#E08A1E",
+      "sortOrder": 3
+     },
+     {
+      "id": "F6637234-0F23-5952-9899-7A630988FBEA",
+      "name": "Wykończenia",
+      "color": "#2E9E5B",
+      "sortOrder": 4
+     },
+     {
+      "id": "8E0F6834-B6F0-5B96-95AF-D24362BBC459",
+      "name": "Odbiory",
+      "color": "#D6455D",
+      "sortOrder": 5
+     }
+    ],
+    "tasks": [
+     {
+      "id": "41B3EDAA-1CEA-5631-9346-29EF82ED4C6C",
+      "phaseId": "D033BA28-A483-5DB8-AB10-28FB4446C101",
+      "kind": "task",
+      "title": "Zabezpieczenie wykopu — ścianka berlińska",
+      "details": "",
+      "startOffset": -305,
+      "finishOffset": -291,
+      "progress": 100,
+      "status": "completed",
+      "responsibleName": "GB Horyzont Sp. z o.o.",
+      "responsibleLinkId": "73772601-5604-5997-A83C-FFAD89B768F2",
+      "notes": "",
+      "sortOrder": 0
+     },
+     {
+      "id": "4C53E16D-704C-599E-896C-5FA629C43BAD",
+      "phaseId": "D033BA28-A483-5DB8-AB10-28FB4446C101",
+      "kind": "task",
+      "title": "Wykopy szerokoprzestrzenne i odwóz urobku",
+      "details": "",
+      "startOffset": -290,
+      "finishOffset": -268,
+      "progress": 100,
+      "status": "completed",
+      "responsibleName": "GB Horyzont Sp. z o.o.",
+      "responsibleLinkId": "73772601-5604-5997-A83C-FFAD89B768F2",
+      "notes": "",
+      "sortOrder": 1
+     },
+     {
+      "id": "DFD57B91-C25B-5E2E-97D1-24410CE653A7",
+      "phaseId": "D033BA28-A483-5DB8-AB10-28FB4446C101",
+      "kind": "milestone",
+      "title": "Odbiór geotechniczny dna wykopu",
+      "details": "",
+      "startOffset": -266,
+      "finishOffset": -266,
+      "progress": 100,
+      "status": "completed",
+      "responsibleName": "GB Horyzont Sp. z o.o.",
+      "responsibleLinkId": "73772601-5604-5997-A83C-FFAD89B768F2",
+      "notes": "",
+      "sortOrder": 2
+     },
+     {
+      "id": "DB2C7074-1E93-5701-A0A4-8BD9AA5ACEA1",
+      "phaseId": "61553104-E1F9-5DB9-A053-151D958DCD63",
+      "kind": "task",
+      "title": "Płyta fundamentowa i ściany garażu",
+      "details": "",
+      "startOffset": -262,
+      "finishOffset": -215,
+      "progress": 100,
+      "status": "completed",
+      "responsibleName": "Betonex Konstrukcje Sp. z o.o.",
+      "responsibleLinkId": "72B7A2C0-A056-52DE-8DCF-5F61501F7E6A",
+      "notes": "",
+      "sortOrder": 3
+     },
+     {
+      "id": "E2C47781-D9ED-5360-8CF5-B1693D0A8FFF",
+      "phaseId": "61553104-E1F9-5DB9-A053-151D958DCD63",
+      "kind": "task",
+      "title": "Strop nad garażem (dach zielony)",
+      "details": "",
+      "startOffset": -214,
+      "finishOffset": -196,
+      "progress": 100,
+      "status": "completed",
+      "responsibleName": "Betonex Konstrukcje Sp. z o.o.",
+      "responsibleLinkId": "72B7A2C0-A056-52DE-8DCF-5F61501F7E6A",
+      "notes": "",
+      "sortOrder": 4
+     },
+     {
+      "id": "24CA7DB7-7A16-5FF8-8C54-C35F62DDBBD3",
+      "phaseId": "61553104-E1F9-5DB9-A053-151D958DCD63",
+      "kind": "task",
+      "title": "Konstrukcja kondygnacji 0–3 (ściany i stropy)",
+      "details": "",
+      "startOffset": -194,
+      "finishOffset": -118,
+      "progress": 100,
+      "status": "completed",
+      "responsibleName": "Betonex Konstrukcje Sp. z o.o.",
+      "responsibleLinkId": "72B7A2C0-A056-52DE-8DCF-5F61501F7E6A",
+      "notes": "",
+      "sortOrder": 5
+     },
+     {
+      "id": "299679BF-F8B8-5ACA-950A-E1D8399025DC",
+      "phaseId": "61553104-E1F9-5DB9-A053-151D958DCD63",
+      "kind": "milestone",
+      "title": "Zakończenie konstrukcji stanu surowego",
+      "details": "",
+      "startOffset": -116,
+      "finishOffset": -116,
+      "progress": 100,
+      "status": "completed",
+      "responsibleName": "Betonex Konstrukcje Sp. z o.o.",
+      "responsibleLinkId": "72B7A2C0-A056-52DE-8DCF-5F61501F7E6A",
+      "notes": "",
+      "sortOrder": 6
+     },
+     {
+      "id": "BF6D86BC-5E96-5D9F-959C-9CB93003D888",
+      "phaseId": "EFDC783C-D817-5F0A-8BAC-C3FFF3183B1C",
+      "kind": "task",
+      "title": "Ściany działowe — silikat 12 cm",
+      "details": "",
+      "startOffset": -130,
+      "finishOffset": -70,
+      "progress": 100,
+      "status": "completed",
+      "responsibleName": "GB Horyzont Sp. z o.o.",
+      "responsibleLinkId": "73772601-5604-5997-A83C-FFAD89B768F2",
+      "notes": "",
+      "sortOrder": 7
+     },
+     {
+      "id": "B0C70958-4C49-5989-8ECF-46510FE33B18",
+      "phaseId": "EFDC783C-D817-5F0A-8BAC-C3FFF3183B1C",
+      "kind": "task",
+      "title": "Dach — stropodach i attyka",
+      "details": "",
+      "startOffset": -112,
+      "finishOffset": -84,
+      "progress": 100,
+      "status": "completed",
+      "responsibleName": "GB Horyzont Sp. z o.o.",
+      "responsibleLinkId": "73772601-5604-5997-A83C-FFAD89B768F2",
+      "notes": "",
+      "sortOrder": 8
+     },
+     {
+      "id": "20CF2CF7-C732-5578-818B-8D6BD90137A0",
+      "phaseId": "EFDC783C-D817-5F0A-8BAC-C3FFF3183B1C",
+      "kind": "task",
+      "title": "Stolarka okienna i drzwi balkonowe",
+      "details": "",
+      "startOffset": -95,
+      "finishOffset": -40,
+      "progress": 100,
+      "status": "completed",
+      "responsibleName": "Lumen Okna i Fasady Sp. z o.o.",
+      "responsibleLinkId": "FC0F79EF-279A-5780-A65C-FF4271DB23B6",
+      "notes": "",
+      "sortOrder": 9
+     },
+     {
+      "id": "4108A21E-FE65-5E8A-9548-6D5E50663FA2",
+      "phaseId": "EFDC783C-D817-5F0A-8BAC-C3FFF3183B1C",
+      "kind": "milestone",
+      "title": "Stan surowy zamknięty",
+      "details": "",
+      "startOffset": -38,
+      "finishOffset": -38,
+      "progress": 100,
+      "status": "completed",
+      "responsibleName": "GB Horyzont Sp. z o.o.",
+      "responsibleLinkId": "73772601-5604-5997-A83C-FFAD89B768F2",
+      "notes": "",
+      "sortOrder": 10
+     },
+     {
+      "id": "4A3E7091-6F31-5800-B0AA-D87D59BE4F1C",
+      "phaseId": "330D952D-A1F8-5CBC-B8F0-876A6B97B242",
+      "kind": "task",
+      "title": "Instalacje wod.-kan. — piony i poziomy",
+      "details": "",
+      "startOffset": -88,
+      "finishOffset": 12,
+      "progress": 85,
+      "status": "inProgress",
+      "responsibleName": "AquaTerm Sp. z o.o.",
+      "responsibleLinkId": "8E4EE240-B6BB-5409-A16E-4FFF466CDC02",
+      "notes": "",
+      "sortOrder": 11
+     },
+     {
+      "id": "670B5799-1F66-57A5-B44D-3849C572E6E1",
+      "phaseId": "330D952D-A1F8-5CBC-B8F0-876A6B97B242",
+      "kind": "task",
+      "title": "Instalacje elektryczne — okablowanie lokali",
+      "details": "",
+      "startOffset": -75,
+      "finishOffset": 18,
+      "progress": 72,
+      "status": "inProgress",
+      "responsibleName": "Elektro-Volt Instalacje s.c.",
+      "responsibleLinkId": "12804BB7-004C-554A-AE5D-3955021AC353",
+      "notes": "",
+      "sortOrder": 12
+     },
+     {
+      "id": "7A70CFC5-EC04-52CB-8E1F-C3904EAFAB3A",
+      "phaseId": "330D952D-A1F8-5CBC-B8F0-876A6B97B242",
+      "kind": "task",
+      "title": "Wentylacja mechaniczna — kanały i centrala",
+      "details": "",
+      "startOffset": -45,
+      "finishOffset": 20,
+      "progress": 40,
+      "status": "delayed",
+      "responsibleName": "AquaTerm Sp. z o.o.",
+      "responsibleLinkId": "8E4EE240-B6BB-5409-A16E-4FFF466CDC02",
+      "notes": "",
+      "sortOrder": 13
+     },
+     {
+      "id": "97E923E6-DCC8-5A78-ADE6-564F3A4467F7",
+      "phaseId": "330D952D-A1F8-5CBC-B8F0-876A6B97B242",
+      "kind": "task",
+      "title": "Instalacje teletechniczne i domofonowe",
+      "details": "",
+      "startOffset": 20,
+      "finishOffset": 42,
+      "progress": 0,
+      "status": "planned",
+      "responsibleName": "Elektro-Volt Instalacje s.c.",
+      "responsibleLinkId": "12804BB7-004C-554A-AE5D-3955021AC353",
+      "notes": "",
+      "sortOrder": 14
+     },
+     {
+      "id": "99D9B2D4-AC3F-5BCA-A790-28CFF6635D30",
+      "phaseId": "F6637234-0F23-5952-9899-7A630988FBEA",
+      "kind": "task",
+      "title": "Tynki wewnętrzne gipsowe",
+      "details": "",
+      "startOffset": -50,
+      "finishOffset": 14,
+      "progress": 70,
+      "status": "inProgress",
+      "responsibleName": "Pro-Dom Wykończenia Sp. j.",
+      "responsibleLinkId": "151338BB-CD96-5435-A036-B015C12DE1DA",
+      "notes": "",
+      "sortOrder": 15
+     },
+     {
+      "id": "A26469A4-EDB9-510B-BADC-772BDB80D651",
+      "phaseId": "F6637234-0F23-5952-9899-7A630988FBEA",
+      "kind": "task",
+      "title": "Wylewki posadzkowe",
+      "details": "",
+      "startOffset": -24,
+      "finishOffset": 26,
+      "progress": 30,
+      "status": "inProgress",
+      "responsibleName": "Pro-Dom Wykończenia Sp. j.",
+      "responsibleLinkId": "151338BB-CD96-5435-A036-B015C12DE1DA",
+      "notes": "",
+      "sortOrder": 16
+     },
+     {
+      "id": "89AA2637-AF98-58AE-BC20-16777008C275",
+      "phaseId": "F6637234-0F23-5952-9899-7A630988FBEA",
+      "kind": "task",
+      "title": "Elewacja — ocieplenie ETICS i tynk",
+      "details": "",
+      "startOffset": -32,
+      "finishOffset": 48,
+      "progress": 20,
+      "status": "delayed",
+      "responsibleName": "Lumen Okna i Fasady Sp. z o.o.",
+      "responsibleLinkId": "FC0F79EF-279A-5780-A65C-FF4271DB23B6",
+      "notes": "",
+      "sortOrder": 17
+     },
+     {
+      "id": "EA99E90F-5592-5C3A-9DFD-39B88A89441D",
+      "phaseId": "F6637234-0F23-5952-9899-7A630988FBEA",
+      "kind": "task",
+      "title": "Malowanie, okładziny i biały montaż",
+      "details": "",
+      "startOffset": 28,
+      "finishOffset": 76,
+      "progress": 0,
+      "status": "planned",
+      "responsibleName": "Pro-Dom Wykończenia Sp. j.",
+      "responsibleLinkId": "151338BB-CD96-5435-A036-B015C12DE1DA",
+      "notes": "",
+      "sortOrder": 18
+     },
+     {
+      "id": "25CC97AE-CF75-5532-A7D8-A082713AE67E",
+      "phaseId": "8E0F6834-B6F0-5B96-95AF-D24362BBC459",
+      "kind": "task",
+      "title": "Odbiory branżowe instalacji",
+      "details": "",
+      "startOffset": 62,
+      "finishOffset": 80,
+      "progress": 0,
+      "status": "planned",
+      "responsibleName": "GB Horyzont Sp. z o.o.",
+      "responsibleLinkId": "73772601-5604-5997-A83C-FFAD89B768F2",
+      "notes": "",
+      "sortOrder": 19
+     },
+     {
+      "id": "F28106BA-E6E1-5A31-8A7B-D84F3F417D8B",
+      "phaseId": "8E0F6834-B6F0-5B96-95AF-D24362BBC459",
+      "kind": "task",
+      "title": "Zagospodarowanie terenu i plac zabaw",
+      "details": "",
+      "startOffset": 40,
+      "finishOffset": 88,
+      "progress": 0,
+      "status": "planned",
+      "responsibleName": "Zieleń-Tech Sp. z o.o.",
+      "responsibleLinkId": "7CBBCBFE-487D-5029-A3EC-527957CAC3CA",
+      "notes": "",
+      "sortOrder": 20
+     },
+     {
+      "id": "3A212938-338B-53DD-9996-71944F3A0ABD",
+      "phaseId": "8E0F6834-B6F0-5B96-95AF-D24362BBC459",
+      "kind": "milestone",
+      "title": "Odbiór końcowy budynku A",
+      "details": "",
+      "startOffset": 95,
+      "finishOffset": 95,
+      "progress": 0,
+      "status": "planned",
+      "responsibleName": "GB Horyzont Sp. z o.o.",
+      "responsibleLinkId": "73772601-5604-5997-A83C-FFAD89B768F2",
+      "notes": "",
+      "sortOrder": 21
+     },
+     {
+      "id": "9C5A4BB5-D4CE-5802-8A56-BB2ED8A79984",
+      "phaseId": "8E0F6834-B6F0-5B96-95AF-D24362BBC459",
+      "kind": "task",
+      "title": "Przekazanie lokali nabywcom",
+      "details": "",
+      "startOffset": 100,
+      "finishOffset": 125,
+      "progress": 0,
+      "status": "planned",
+      "responsibleName": "GB Horyzont Sp. z o.o.",
+      "responsibleLinkId": "73772601-5604-5997-A83C-FFAD89B768F2",
+      "notes": "",
+      "sortOrder": 22
+     }
+    ],
+    "dependencies": [
+     {
+      "id": "AADFF1A6-374A-50EF-A051-E19BA8674740",
+      "predecessorId": "41B3EDAA-1CEA-5631-9346-29EF82ED4C6C",
+      "successorId": "4C53E16D-704C-599E-896C-5FA629C43BAD"
+     },
+     {
+      "id": "FA0A2105-75A5-5E2A-BAEE-D5B3E499FD22",
+      "predecessorId": "4C53E16D-704C-599E-896C-5FA629C43BAD",
+      "successorId": "DFD57B91-C25B-5E2E-97D1-24410CE653A7"
+     },
+     {
+      "id": "0249BF0A-11A2-5EEB-8928-F7270BF513D7",
+      "predecessorId": "DFD57B91-C25B-5E2E-97D1-24410CE653A7",
+      "successorId": "DB2C7074-1E93-5701-A0A4-8BD9AA5ACEA1"
+     },
+     {
+      "id": "8C2FBC02-360D-51A1-B8B8-8A4D748A7C41",
+      "predecessorId": "DB2C7074-1E93-5701-A0A4-8BD9AA5ACEA1",
+      "successorId": "E2C47781-D9ED-5360-8CF5-B1693D0A8FFF"
+     },
+     {
+      "id": "4EF89631-485D-5FB2-87AA-28864329D1A8",
+      "predecessorId": "E2C47781-D9ED-5360-8CF5-B1693D0A8FFF",
+      "successorId": "24CA7DB7-7A16-5FF8-8C54-C35F62DDBBD3"
+     },
+     {
+      "id": "307C74C8-FCCD-5624-AA5C-DB0ECE06E9F4",
+      "predecessorId": "24CA7DB7-7A16-5FF8-8C54-C35F62DDBBD3",
+      "successorId": "299679BF-F8B8-5ACA-950A-E1D8399025DC"
+     },
+     {
+      "id": "B679C778-C753-5A07-B512-804A60609D61",
+      "predecessorId": "299679BF-F8B8-5ACA-950A-E1D8399025DC",
+      "successorId": "B0C70958-4C49-5989-8ECF-46510FE33B18"
+     },
+     {
+      "id": "D247A943-70A0-500E-AE6F-CAE7771931AB",
+      "predecessorId": "20CF2CF7-C732-5578-818B-8D6BD90137A0",
+      "successorId": "4108A21E-FE65-5E8A-9548-6D5E50663FA2"
+     },
+     {
+      "id": "5EF4D1D0-FBD6-5AAA-AC0E-8908C180B2CF",
+      "predecessorId": "670B5799-1F66-57A5-B44D-3849C572E6E1",
+      "successorId": "97E923E6-DCC8-5A78-ADE6-564F3A4467F7"
+     },
+     {
+      "id": "0A85323E-9A55-558D-AB5E-44BE57B94876",
+      "predecessorId": "BF6D86BC-5E96-5D9F-959C-9CB93003D888",
+      "successorId": "99D9B2D4-AC3F-5BCA-A790-28CFF6635D30"
+     },
+     {
+      "id": "5343C7B4-E4DF-51B1-ABCC-27603AD9AC52",
+      "predecessorId": "99D9B2D4-AC3F-5BCA-A790-28CFF6635D30",
+      "successorId": "EA99E90F-5592-5C3A-9DFD-39B88A89441D"
+     },
+     {
+      "id": "2D262949-1F3D-5A8D-B5F6-A62BB81A2359",
+      "predecessorId": "A26469A4-EDB9-510B-BADC-772BDB80D651",
+      "successorId": "EA99E90F-5592-5C3A-9DFD-39B88A89441D"
+     },
+     {
+      "id": "71AC4585-5878-565E-9037-25C4858CA8DF",
+      "predecessorId": "4A3E7091-6F31-5800-B0AA-D87D59BE4F1C",
+      "successorId": "25CC97AE-CF75-5532-A7D8-A082713AE67E"
+     },
+     {
+      "id": "E86CD5C1-AF93-5F4B-AD3B-9E93E7B99E18",
+      "predecessorId": "7A70CFC5-EC04-52CB-8E1F-C3904EAFAB3A",
+      "successorId": "25CC97AE-CF75-5532-A7D8-A082713AE67E"
+     },
+     {
+      "id": "DAC4B1D9-B335-5D63-8481-62C62866E2DA",
+      "predecessorId": "97E923E6-DCC8-5A78-ADE6-564F3A4467F7",
+      "successorId": "25CC97AE-CF75-5532-A7D8-A082713AE67E"
+     },
+     {
+      "id": "3C5F559F-3AC1-5100-BC83-B82F9CC5D9A9",
+      "predecessorId": "89AA2637-AF98-58AE-BC20-16777008C275",
+      "successorId": "3A212938-338B-53DD-9996-71944F3A0ABD"
+     },
+     {
+      "id": "CA4227D4-2CDC-5D5E-9FA7-E1A06258F168",
+      "predecessorId": "EA99E90F-5592-5C3A-9DFD-39B88A89441D",
+      "successorId": "3A212938-338B-53DD-9996-71944F3A0ABD"
+     },
+     {
+      "id": "D2BEAE8F-4FFA-576C-9EAA-1471C09FFFDC",
+      "predecessorId": "25CC97AE-CF75-5532-A7D8-A082713AE67E",
+      "successorId": "3A212938-338B-53DD-9996-71944F3A0ABD"
+     },
+     {
+      "id": "BF2381E1-96FE-5532-A8B8-521CE006C677",
+      "predecessorId": "F28106BA-E6E1-5A31-8A7B-D84F3F417D8B",
+      "successorId": "3A212938-338B-53DD-9996-71944F3A0ABD"
+     },
+     {
+      "id": "DFC04172-F092-5EA8-8438-2DC40156142B",
+      "predecessorId": "3A212938-338B-53DD-9996-71944F3A0ABD",
+      "successorId": "9C5A4BB5-D4CE-5802-8A56-BB2ED8A79984"
+     }
+    ]
+   },
+   "documentFolders": [
+    {
+     "id": "508986D6-3F4F-530A-8366-A3C4934BF0C9",
+     "parentId": null,
+     "name": "Specyfikacje techniczne",
+     "sortOrder": 0
+    },
+    {
+     "id": "E130999E-566A-55A8-A846-245BE18508BE",
+     "parentId": null,
+     "name": "Protokoły i notatki",
+     "sortOrder": 1
+    },
+    {
+     "id": "C0B47900-B8D9-5D00-A71E-10DFA4E32AD7",
+     "parentId": null,
+     "name": "BHP",
+     "sortOrder": 2
+    }
+   ],
+   "documents": [
+    {
+     "id": "43881B0E-9260-5EE9-AAA5-2CCE1537BEF4",
+     "folderId": "508986D6-3F4F-530A-8366-A3C4934BF0C9",
+     "resource": "demo-fixture-doc-st04_hydroizolacja.pdf",
+     "originalFileName": "ST-04 Roboty hydroizolacyjne.pdf",
+     "name": "ST-04 Roboty hydroizolacyjne",
+     "category": "technical_specification",
+     "description": "Balkony, tarasy, progi i łazienki — wymagania wykonania i odbioru.",
+     "revision": "B",
+     "revisionDate": "2026-03-18",
+     "uploadedDayOffset": -200
+    },
+    {
+     "id": "256FB1CB-2995-51BA-8185-CCB3C72FE6C9",
+     "folderId": "508986D6-3F4F-530A-8366-A3C4934BF0C9",
+     "resource": "demo-fixture-doc-st02_beton.pdf",
+     "originalFileName": "ST-02 Beton konstrukcyjny.pdf",
+     "name": "ST-02 Beton konstrukcyjny",
+     "category": "material_specification",
+     "description": "Klasy betonu, otuliny, pielęgnacja i badania.",
+     "revision": "A",
+     "revisionDate": "2026-02-16",
+     "uploadedDayOffset": -280
+    },
+    {
+     "id": "BA6831B9-1AC2-5CFB-B292-EBAE0FD422A8",
+     "folderId": "E130999E-566A-55A8-A846-245BE18508BE",
+     "resource": "demo-fixture-doc-n14_narada.pdf",
+     "originalFileName": "Notatka z narady koordynacyjnej nr 14.pdf",
+     "name": "Notatka z narady koordynacyjnej nr 14",
+     "category": "construction_documentation",
+     "description": "Kolizje instalacji w korytarzach, przejścia EI60, opisy RG.",
+     "revision": null,
+     "revisionDate": null,
+     "uploadedDayOffset": -5
+    },
+    {
+     "id": "957FE1D2-44D9-52CF-9BE4-06815A964E80",
+     "folderId": "E130999E-566A-55A8-A846-245BE18508BE",
+     "resource": "demo-fixture-doc-lk03_odbior.pdf",
+     "originalFileName": "LK-03 Lista kontrolna odbioru wykończeń.pdf",
+     "name": "LK-03 Lista kontrolna odbioru wykończeń",
+     "category": "construction_instruction",
+     "description": "Odbiory wewnętrzne lokali przed przekazaniem nabywcom.",
+     "revision": "A",
+     "revisionDate": "2026-09-01",
+     "uploadedDayOffset": -45
+    },
+    {
+     "id": "F7D378D2-BFC5-5936-B292-9E9293FC8EF7",
+     "folderId": "C0B47900-B8D9-5D00-A71E-10DFA4E32AD7",
+     "resource": "demo-fixture-doc-bhp02_wysokosc.pdf",
+     "originalFileName": "BHP-02 Prace na wysokości i rusztowaniach.pdf",
+     "name": "BHP-02 Prace na wysokości i rusztowaniach",
+     "category": "construction_instruction",
+     "description": "Instrukcja dla pracowników GW i podwykonawców.",
+     "revision": "A",
+     "revisionDate": "2026-01-20",
+     "uploadedDayOffset": -300
+    },
+    {
+     "id": "09406A0B-DD19-5AF4-A667-A1A22D8EF5AF",
+     "folderId": "E130999E-566A-55A8-A846-245BE18508BE",
+     "resource": "demo-fixture-doc-pe01_elektryka.pdf",
+     "originalFileName": "PE-01 Protokół przeglądu instalacji elektrycznej.pdf",
+     "name": "PE-01 Protokół przeglądu instalacji elektrycznej",
+     "category": "construction_documentation",
+     "description": "Parter budynku A — przegląd przed zamknięciem sufitów.",
+     "revision": null,
+     "revisionDate": null,
+     "uploadedDayOffset": -2
+    }
+   ],
+   "notes": [
+    {
+     "id": "55E4D516-C0D1-5FC5-84B0-4774168564B8",
+     "title": "Narada nr 14 — ustalenia dla korytarza parteru",
+     "category": "meeting",
+     "createdDayOffset": -5,
+     "body": "Obniżenie koryta kablowego w osi 5 o 15 cm (Elektro-Volt). Klapy KPP przed zamknięciem sufitów (AquaTerm). Uszczelnienia przejść EI60 w pom. 0.18 w ciągu 10 dni."
+    },
+    {
+     "id": "53C480F0-A3F2-5A4A-B2A1-5D42E4547DA1",
+     "title": "Pomiar wilgotności wylewek — lokale A/07–A/10",
+     "category": "measurement",
+     "createdDayOffset": -3,
+     "body": "Metoda CM: A/07 1,8%, A/08 2,4%, A/09 1,9%, A/10 2,1%. Wymagane maks. 2,0% pod parkiet — A/08 i A/10 do ponownego pomiaru za 7 dni."
+    },
+    {
+     "id": "CABE22C0-6592-5C33-B810-92B428A78ECD",
+     "title": "Przegląd balkonów — piętro 1",
+     "category": "inspection",
+     "createdDayOffset": -6,
+     "body": "Próba wodna: A/08 przeciek przy progu (usterka zgłoszona), A/09 zastoisko przy balustradzie. Pozostałe bez uwag."
+    },
+    {
+     "id": "46865541-2F4E-5FC8-A046-C6418F5E5AB1",
+     "title": "Polecenie KB — zabezpieczenie otworów w stropach",
+     "category": "instruction",
+     "createdDayOffset": -27,
+     "body": "Wszystkie otwory pod piony K1–K8 przykryć płytą OSB z oznakowaniem do czasu montażu pionów. Odpowiedzialny: brygadzista GW."
+    }
+   ]
+  },
+  {
+   "id": "044DC415-4691-5A4E-B4E3-9B8B5664FB7D",
+   "key": "B",
+   "name": "Modernizacja Biurowca — Centrum",
+   "description": "Modernizacja wnętrz i instalacji technicznych 3. piętra istniejącego biurowca: open space, sale spotkań, serwerownia, nowe instalacje HVAC i elektryczne.",
+   "createdDayOffset": -60,
+   "contactLinks": [
+    {
+     "id": "F1E87385-CBE4-56C2-919D-3DD7CC5E0C67",
+     "kind": "company",
+     "contactId": "3488E5B1-6B15-54AB-BB6E-F3FEFD12B6D8",
+     "role": "Inwestor / zarządca"
+    },
+    {
+     "id": "06EDD333-7901-5ABF-B81D-577D6DF92BAA",
+     "kind": "company",
+     "contactId": "49E65925-D08E-5ED9-80E2-88A9175BF47A",
+     "role": "Generalny wykonawca"
+    },
+    {
+     "id": "4D382FF0-32B2-5FC0-B6EE-67EE458E804F",
+     "kind": "company",
+     "contactId": "9C35DBAE-43C9-5813-9AFA-70A5A9CC0DB9",
+     "role": "Podwykonawca — elektryka i teletechnika"
+    },
+    {
+     "id": "7198A8F3-BE32-5153-B37A-F084158FFBEA",
+     "kind": "company",
+     "contactId": "7E75D5D5-7D9C-5738-A2A7-88EE61FA20AC",
+     "role": "Podwykonawca — HVAC"
+    },
+    {
+     "id": "7FB0ACB1-AD70-5518-924D-92E56D2BE91F",
+     "kind": "person",
+     "contactId": "9C1A097D-EDE2-534C-B61C-6A95352617EA",
+     "role": "Kierownik projektu"
+    },
+    {
+     "id": "F0E23D2A-1829-5B3E-8CC4-56448352B70E",
+     "kind": "person",
+     "contactId": "F8908084-93EC-56E0-B4D9-6F50D20D697F",
+     "role": "Administrator budynku"
+    },
+    {
+     "id": "DA88BB29-1F90-5D8F-8DB0-2084E0D97115",
+     "kind": "person",
+     "contactId": "5E508635-7568-542F-BD70-59AE6AEF0703",
+     "role": "Kierownik robót elektrycznych"
+    },
+    {
+     "id": "A4CB510D-E65B-5713-8CA9-9D1E99130628",
+     "kind": "person",
+     "contactId": "063A7985-847B-5299-9973-6253F267C8AB",
+     "role": "Kierownik robót HVAC"
+    }
+   ],
+   "drawingFolders": [
+    {
+     "id": "105CF85D-863A-5285-B970-D474C2E683AF",
+     "parentId": null,
+     "name": "Architektura",
+     "sortOrder": 0
+    },
+    {
+     "id": "C65E7FAB-BCF0-5C1D-9ADD-31F4B704BFDA",
+     "parentId": null,
+     "name": "Instalacje",
+     "sortOrder": 1
+    }
+   ],
+   "drawings": [
+    {
+     "id": "488F6FFD-1FBB-53ED-AFA0-8697865E0B16",
+     "folderId": "105CF85D-863A-5285-B970-D474C2E683AF",
+     "number": "B-A-301",
+     "name": "B-A-301 Rzut 3. piętra — stan projektowany",
+     "resource": "demo-fixture-dwg-b301.pdf",
+     "pageCount": 1,
+     "pageWidth": 1190.55,
+     "pageHeight": 841.89,
+     "revision": "A",
+     "discipline": "Architektura",
+     "location": "Biurowiec Centrum, 3. piętro",
+     "drawingDate": "2026-08-21",
+     "calibrations": [
+      {
+       "id": "136EF67A-ED98-5FC4-A3C9-754CBF8DA3B1",
+       "pageIndex": 0,
+       "ax": 115.0,
+       "ay": 234.65,
+       "bx": 965.39,
+       "by": 234.65,
+       "enteredValue": 30.0,
+       "unit": "m"
+      }
+     ]
+    },
+    {
+     "id": "EACEF937-6E2F-5103-BE4A-67E8F3401170",
+     "folderId": "C65E7FAB-BCF0-5C1D-9ADD-31F4B704BFDA",
+     "number": "B-E-301",
+     "name": "B-E-301 Instalacje elektryczne i teletechniczne — 3. piętro",
+     "resource": "demo-fixture-dwg-be301.pdf",
+     "pageCount": 1,
+     "pageWidth": 1190.55,
+     "pageHeight": 841.89,
+     "revision": "A",
+     "discipline": "Instalacje elektryczne",
+     "location": "Biurowiec Centrum, 3. piętro",
+     "drawingDate": "2026-08-28",
+     "calibrations": []
+    },
+    {
+     "id": "68C4E983-C07B-5530-902C-778E15069667",
+     "folderId": "C65E7FAB-BCF0-5C1D-9ADD-31F4B704BFDA",
+     "number": "B-H-301",
+     "name": "B-H-301 Instalacje HVAC — 3. piętro",
+     "resource": "demo-fixture-dwg-bh301.pdf",
+     "pageCount": 1,
+     "pageWidth": 1190.55,
+     "pageHeight": 841.89,
+     "revision": "A",
+     "discipline": "Wentylacja i klimatyzacja",
+     "location": "Biurowiec Centrum, 3. piętro",
+     "drawingDate": "2026-08-28",
+     "calibrations": []
+    }
+   ],
+   "areas": [
+    {
+     "id": "6BF0C890-241B-52DE-9706-E1BF80F4767F",
+     "drawingId": "488F6FFD-1FBB-53ED-AFA0-8697865E0B16",
+     "pageIndex": 0,
+     "name": "Open space — strefa zachodnia",
+     "color": "#5AC8FA",
+     "opacity": 0.2,
+     "vertices": [
+      [
+       123.5,
+       288.5
+      ],
+      [
+       452.32,
+       288.5
+      ],
+      [
+       452.32,
+       747.72
+      ],
+      [
+       123.5,
+       747.72
+      ]
+     ]
+    },
+    {
+     "id": "24580158-C9DB-5BBC-8026-22837F6DCE82",
+     "drawingId": "EACEF937-6E2F-5103-BE4A-67E8F3401170",
+     "pageIndex": 0,
+     "name": "Serwerownia 3.12",
+     "color": "#FF3B30",
+     "opacity": 0.3,
+     "vertices": [
+      [
+       769.8,
+       435.91
+      ],
+      [
+       863.35,
+       435.91
+      ],
+      [
+       863.35,
+       600.31
+      ],
+      [
+       769.8,
+       600.31
+      ]
+     ]
+    }
+   ],
+   "issues": [
+    {
+     "id": "413EA89A-FFA5-5334-A4C2-BF0482686DD4",
+     "number": 1,
+     "drawingId": "EACEF937-6E2F-5103-BE4A-67E8F3401170",
+     "pageIndex": 0,
+     "x": 778.31,
+     "y": 557.8,
+     "areaId": "24580158-C9DB-5BBC-8026-22837F6DCE82",
+     "title": "Brak uszczelnienia przejścia kablowego do serwerowni",
+     "details": "Przejście koryta przez ścianę serwerowni bez uszczelnienia ogniochronnego EI60.",
+     "status": "open",
+     "discipline": "Instalacje elektryczne",
+     "contractor": "Elektro-Volt Instalacje s.c.",
+     "createdDayOffset": -6,
+     "createdMinute": 615,
+     "photos": []
+    },
+    {
+     "id": "E440D0AA-FBA1-5D9E-A18E-1579D9D9084E",
+     "number": 2,
+     "drawingId": "68C4E983-C07B-5530-902C-778E15069667",
+     "pageIndex": 0,
+     "x": 738.62,
+     "y": 624.41,
+     "areaId": null,
+     "title": "Kolizja trasy kablowej z kanałem świeżego powietrza nad salą 3.05",
+     "details": "Koryto kablowe przechodzi pod kanałem 500×250 — brak miejsca na montaż sufitu.",
+     "status": "inProgress",
+     "discipline": "Wentylacja i klimatyzacja",
+     "contractor": "AquaTerm Sp. z o.o.",
+     "createdDayOffset": -9,
+     "createdMinute": 700,
+     "photos": []
+    },
+    {
+     "id": "61545096-3899-550E-AD81-EB1869B8E689",
+     "number": 3,
+     "drawingId": "488F6FFD-1FBB-53ED-AFA0-8697865E0B16",
+     "pageIndex": 0,
+     "x": 285.08,
+     "y": 563.46,
+     "areaId": "6BF0C890-241B-52DE-9706-E1BF80F4767F",
+     "title": "Uszkodzona płyta sufitu podwieszanego",
+     "details": "Pęknięta płyta 60×60 po montażu instalacji nad sufitem.",
+     "status": "open",
+     "discipline": "Roboty wykończeniowe",
+     "contractor": "Modulo Fit-Out Sp. z o.o.",
+     "createdDayOffset": -4,
+     "createdMinute": 545,
+     "photos": [
+      {
+       "id": "D9F883C8-53DD-58A3-9518-7BBB47DC8BF6",
+       "resource": "demo-fixture-photo-b-office-1.png",
+       "dayOffset": -4,
+       "minute": 547
+      }
+     ]
+    },
+    {
+     "id": "1B2CB90C-B2EF-5202-B626-3F7C25B974BA",
+     "number": 4,
+     "drawingId": "488F6FFD-1FBB-53ED-AFA0-8697865E0B16",
+     "pageIndex": 0,
+     "x": 808.07,
+     "y": 438.74,
+     "areaId": null,
+     "title": "Drzwi do serwerowni bez klasy EI30",
+     "details": "Zamontowano drzwi bez klasy odporności ogniowej, wymagane EI30 (PFU, pkt 2).",
+     "status": "open",
+     "discipline": "Architektura",
+     "contractor": "Modulo Fit-Out Sp. z o.o.",
+     "createdDayOffset": -3,
+     "createdMinute": 865,
+     "photos": []
+    },
+    {
+     "id": "38B11326-3982-5D7D-B86C-4D5576CDC462",
+     "number": 5,
+     "drawingId": "488F6FFD-1FBB-53ED-AFA0-8697865E0B16",
+     "pageIndex": 0,
+     "x": 302.09,
+     "y": 447.24,
+     "areaId": "6BF0C890-241B-52DE-9706-E1BF80F4767F",
+     "title": "Niewypoziomowana podłoga podniesiona przy słupie B/2",
+     "details": "Różnica poziomów płyt do 4 mm. Wyregulowano wsporniki.",
+     "status": "resolved",
+     "discipline": "Roboty wykończeniowe",
+     "contractor": "Modulo Fit-Out Sp. z o.o.",
+     "createdDayOffset": -15,
+     "createdMinute": 960,
+     "photos": []
+    },
+    {
+     "id": "D113B641-7B5C-54BA-8B56-34EFFE819BB5",
+     "number": 6,
+     "drawingId": "68C4E983-C07B-5530-902C-778E15069667",
+     "pageIndex": 0,
+     "x": 852.01,
+     "y": 457.17,
+     "areaId": null,
+     "title": "Brak podłączenia odpływu skroplin klimatyzatora",
+     "details": "Odpływ skroplin z klimatyzacji precyzyjnej niepodłączony do pionu.",
+     "status": "inProgress",
+     "discipline": "Wentylacja i klimatyzacja",
+     "contractor": "AquaTerm Sp. z o.o.",
+     "createdDayOffset": -5,
+     "createdMinute": 655,
+     "photos": []
+    },
+    {
+     "id": "9E61EB64-11DE-5E0D-9B9D-0917CE0D5525",
+     "number": 7,
+     "drawingId": "488F6FFD-1FBB-53ED-AFA0-8697865E0B16",
+     "pageIndex": 0,
+     "x": 472.17,
+     "y": 637.17,
+     "areaId": null,
+     "title": "Niezgodne oznakowanie ewakuacyjne przy klatce",
+     "details": "Kierunek strzałek niezgodny z planem ewakuacji. Poprawiono.",
+     "status": "closed",
+     "discipline": "BHP",
+     "contractor": "Modulo Fit-Out Sp. z o.o.",
+     "createdDayOffset": -20,
+     "createdMinute": 720,
+     "photos": []
+    },
+    {
+     "id": "362CC1C6-9A49-5791-92D3-7BE33F1D85B4",
+     "number": 8,
+     "drawingId": "EACEF937-6E2F-5103-BE4A-67E8F3401170",
+     "pageIndex": 0,
+     "x": 347.44,
+     "y": 455.75,
+     "areaId": null,
+     "title": "Puszki podłogowe bez oznaczenia obwodów",
+     "details": "Brak oznaczeń obwodów na puszkach podłogowych w strefie zachodniej.",
+     "status": "open",
+     "discipline": "Instalacje elektryczne",
+     "contractor": "Elektro-Volt Instalacje s.c.",
+     "createdDayOffset": -2,
+     "createdMinute": 815,
+     "photos": []
+    }
+   ],
+   "photoAlbums": [
+    {
+     "id": "8C256307-BFB1-5E11-84D1-E66C8776A3F4",
+     "name": "Postęp prac — 3. piętro",
+     "sortOrder": 0
+    },
+    {
+     "id": "C94995F4-7671-53D0-A884-66D6E31B4229",
+     "name": "Usterki",
+     "sortOrder": 1
+    }
+   ],
+   "photos": [
+    {
+     "id": "81E47412-9CB7-59CC-871E-5DEE907D4E91",
+     "resource": "demo-fixture-photo-b-office-0.png",
+     "albumId": "8C256307-BFB1-5E11-84D1-E66C8776A3F4",
+     "title": "Instalacje nad sufitem — strefa zachodnia",
+     "description": "Przewody przed zamknięciem sufitu podwieszanego.",
+     "takenDayOffset": -12,
+     "takenMinute": 600,
+     "drawingId": "488F6FFD-1FBB-53ED-AFA0-8697865E0B16",
+     "pageIndex": 0,
+     "areaId": "6BF0C890-241B-52DE-9706-E1BF80F4767F",
+     "issueId": null
+    },
+    {
+     "id": "1ED855CD-7DDC-5C8B-8481-02E318F1C4D2",
+     "resource": "demo-fixture-photo-b-server_room-0.png",
+     "albumId": "C94995F4-7671-53D0-A884-66D6E31B4229",
+     "title": "Serwerownia — przejście kablowe",
+     "description": "Nieuszczelnione przejście koryta przez ścianę.",
+     "takenDayOffset": -6,
+     "takenMinute": 617,
+     "drawingId": "EACEF937-6E2F-5103-BE4A-67E8F3401170",
+     "pageIndex": 0,
+     "areaId": "24580158-C9DB-5BBC-8026-22837F6DCE82",
+     "issueId": "413EA89A-FFA5-5334-A4C2-BF0482686DD4"
+    },
+    {
+     "id": "95A1BF5B-CD85-513C-AE0A-28C325800680",
+     "resource": "demo-fixture-photo-b-server_room-1.png",
+     "albumId": "8C256307-BFB1-5E11-84D1-E66C8776A3F4",
+     "title": "Szafy rack po montażu",
+     "description": "Serwerownia 3.12 — montaż szaf i koryt.",
+     "takenDayOffset": -8,
+     "takenMinute": 900,
+     "drawingId": null,
+     "pageIndex": null,
+     "areaId": null,
+     "issueId": null
+    }
+   ],
+   "schedule": {
+    "id": "D7ED167A-BDC1-5F2B-8B2B-BF03238A74A2",
+    "name": "Harmonogram modernizacji 3. piętra",
+    "details": "Prace prowadzone przy czynnym budynku.",
+    "phases": [
+     {
+      "id": "16C36103-7C90-55D5-8240-B5E37318927E",
+      "name": "Demontaż",
+      "color": "#7A8794",
+      "sortOrder": 0
+     },
+     {
+      "id": "883B0F6A-0B9A-5CBE-A8E4-B0005F36E321",
+      "name": "Instalacje",
+      "color": "#E08A1E",
+      "sortOrder": 1
+     },
+     {
+      "id": "DFCAE715-12AF-5864-89DB-DD29DA23A89B",
+      "name": "Wykończenie",
+      "color": "#2E9E5B",
+      "sortOrder": 2
+     },
+     {
+      "id": "A486E304-5F01-5FFD-97AC-576EAE2DA101",
+      "name": "Odbiory",
+      "color": "#D6455D",
+      "sortOrder": 3
+     }
+    ],
+    "tasks": [
+     {
+      "id": "F9E60D94-1623-50B1-BECA-772BA02C0B7E",
+      "phaseId": "16C36103-7C90-55D5-8240-B5E37318927E",
+      "kind": "task",
+      "title": "Demontaż ścianek i sufitów — 3. piętro",
+      "details": "",
+      "startOffset": -45,
+      "finishOffset": -30,
+      "progress": 100,
+      "status": "completed",
+      "responsibleName": "Modulo Fit-Out Sp. z o.o.",
+      "responsibleLinkId": "06EDD333-7901-5ABF-B81D-577D6DF92BAA",
+      "notes": "",
+      "sortOrder": 0
+     },
+     {
+      "id": "E38BF5EA-9446-59E5-9FA3-B1264A92FA41",
+      "phaseId": "883B0F6A-0B9A-5CBE-A8E4-B0005F36E321",
+      "kind": "task",
+      "title": "Instalacje elektryczne i teletechnika",
+      "details": "",
+      "startOffset": -28,
+      "finishOffset": 10,
+      "progress": 65,
+      "status": "inProgress",
+      "responsibleName": "Elektro-Volt Instalacje s.c.",
+      "responsibleLinkId": "4D382FF0-32B2-5FC0-B6EE-67EE458E804F",
+      "notes": "",
+      "sortOrder": 1
+     },
+     {
+      "id": "BC619317-793B-5DC7-9C69-6C6B3DA43D7B",
+      "phaseId": "883B0F6A-0B9A-5CBE-A8E4-B0005F36E321",
+      "kind": "task",
+      "title": "HVAC — klimakonwektory i kanały",
+      "details": "",
+      "startOffset": -25,
+      "finishOffset": 14,
+      "progress": 55,
+      "status": "inProgress",
+      "responsibleName": "AquaTerm Sp. z o.o.",
+      "responsibleLinkId": "7198A8F3-BE32-5153-B37A-F084158FFBEA",
+      "notes": "",
+      "sortOrder": 2
+     },
+     {
+      "id": "9D61F356-5643-542C-A508-2BD45B7DCB08",
+      "phaseId": "DFCAE715-12AF-5864-89DB-DD29DA23A89B",
+      "kind": "task",
+      "title": "Ścianki szkło/GK i sufity podwieszane",
+      "details": "",
+      "startOffset": -5,
+      "finishOffset": 25,
+      "progress": 15,
+      "status": "inProgress",
+      "responsibleName": "Modulo Fit-Out Sp. z o.o.",
+      "responsibleLinkId": "06EDD333-7901-5ABF-B81D-577D6DF92BAA",
+      "notes": "",
+      "sortOrder": 3
+     },
+     {
+      "id": "A04E8D9B-93D7-502F-AC0C-FB4D70272844",
+      "phaseId": "DFCAE715-12AF-5864-89DB-DD29DA23A89B",
+      "kind": "task",
+      "title": "Podłoga podniesiona i wykładzina",
+      "details": "",
+      "startOffset": 15,
+      "finishOffset": 32,
+      "progress": 0,
+      "status": "planned",
+      "responsibleName": "Modulo Fit-Out Sp. z o.o.",
+      "responsibleLinkId": "06EDD333-7901-5ABF-B81D-577D6DF92BAA",
+      "notes": "",
+      "sortOrder": 4
+     },
+     {
+      "id": "3C2ECA18-491C-545A-937A-83331F016CFA",
+      "phaseId": "883B0F6A-0B9A-5CBE-A8E4-B0005F36E321",
+      "kind": "task",
+      "title": "Serwerownia — wyposażenie i klimatyzacja",
+      "details": "",
+      "startOffset": 5,
+      "finishOffset": 20,
+      "progress": 0,
+      "status": "planned",
+      "responsibleName": "Elektro-Volt Instalacje s.c.",
+      "responsibleLinkId": "4D382FF0-32B2-5FC0-B6EE-67EE458E804F",
+      "notes": "",
+      "sortOrder": 5
+     },
+     {
+      "id": "D89532F2-DBA8-509D-A5B7-22B3EEE71EB8",
+      "phaseId": "A486E304-5F01-5FFD-97AC-576EAE2DA101",
+      "kind": "milestone",
+      "title": "Odbiór i przekazanie 3. piętra najemcy",
+      "details": "",
+      "startOffset": 40,
+      "finishOffset": 40,
+      "progress": 0,
+      "status": "planned",
+      "responsibleName": "Modulo Fit-Out Sp. z o.o.",
+      "responsibleLinkId": "06EDD333-7901-5ABF-B81D-577D6DF92BAA",
+      "notes": "",
+      "sortOrder": 6
+     }
+    ],
+    "dependencies": [
+     {
+      "id": "78370A8B-4956-5180-8C33-B401CB49FBF5",
+      "predecessorId": "F9E60D94-1623-50B1-BECA-772BA02C0B7E",
+      "successorId": "E38BF5EA-9446-59E5-9FA3-B1264A92FA41"
+     },
+     {
+      "id": "4FCD3DDC-D49E-56EE-8FE7-995831BDD209",
+      "predecessorId": "F9E60D94-1623-50B1-BECA-772BA02C0B7E",
+      "successorId": "BC619317-793B-5DC7-9C69-6C6B3DA43D7B"
+     },
+     {
+      "id": "84797710-734A-5911-BBC1-F789139440EA",
+      "predecessorId": "E38BF5EA-9446-59E5-9FA3-B1264A92FA41",
+      "successorId": "A04E8D9B-93D7-502F-AC0C-FB4D70272844"
+     },
+     {
+      "id": "EC36DB8D-FEA5-51DA-83E0-33F4BF1B57C1",
+      "predecessorId": "9D61F356-5643-542C-A508-2BD45B7DCB08",
+      "successorId": "D89532F2-DBA8-509D-A5B7-22B3EEE71EB8"
+     },
+     {
+      "id": "E321087E-7220-5D76-8B03-65A4F460E926",
+      "predecessorId": "A04E8D9B-93D7-502F-AC0C-FB4D70272844",
+      "successorId": "D89532F2-DBA8-509D-A5B7-22B3EEE71EB8"
+     },
+     {
+      "id": "D9FA58E4-CC89-5CD5-B667-41A7CEA271AE",
+      "predecessorId": "3C2ECA18-491C-545A-937A-83331F016CFA",
+      "successorId": "D89532F2-DBA8-509D-A5B7-22B3EEE71EB8"
+     }
+    ]
+   },
+   "documentFolders": [],
+   "documents": [
+    {
+     "id": "B84EECCD-724B-5464-974F-1B25A36CD1C0",
+     "folderId": null,
+     "resource": "demo-fixture-doc-pfu_3pietro.pdf",
+     "originalFileName": "PFU — aranżacja 3. piętra.pdf",
+     "name": "PFU — aranżacja 3. piętra",
+     "category": "construction_documentation",
+     "description": "Program funkcjonalno-użytkowy modernizacji.",
+     "revision": "1",
+     "revisionDate": "2026-08-10",
+     "uploadedDayOffset": -50
+    }
+   ],
+   "notes": [
+    {
+     "id": "A3F9EF09-6A9F-55F4-82F5-FF2F7E1C2314",
+     "title": "Spotkanie z najemcą — wymagania serwerowni",
+     "category": "meeting",
+     "createdDayOffset": -10,
+     "body": "Najemca potwierdził redundantną klimatyzację 2×7 kW i drzwi EI30 z kontrolą dostępu. UPS 10 kVA w zakresie GW."
+    },
+    {
+     "id": "119360EE-F1A5-5AE0-9C2E-392FA398C744",
+     "title": "Inwentaryzacja instalacji nad sufitem — strefa zachodnia",
+     "category": "inspection",
+     "createdDayOffset": -12,
+     "body": "Stare przewody teletechniczne do demontażu. Kanał świeżego powietrza w dobrym stanie, do ponownego użycia."
+    }
+   ]
+  }
+ ]
+}

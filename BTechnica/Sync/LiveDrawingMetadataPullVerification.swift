@@ -1,3 +1,5 @@
+// Debug-only verification harness (launch-argument driven from BTechnicaApp).
+#if DEBUG
 import Foundation
 import PDFKit
 import Supabase
@@ -491,3 +493,4 @@ private struct LivePullStepError: Error {
     var step: String
     var underlying: Error
 }
+#endif

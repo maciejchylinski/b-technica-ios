@@ -42,7 +42,7 @@ final class DrawingFolderPullService {
         if let onApplied {
             refreshHandler = onApplied
         }
-        guard SupabaseManager.isConfigured || DrawingFolderSyncCoordinator.shared.isTestBypassConfigured else {
+        guard !LocalOnlyWorkspace.isLocalOnly(userId: userId), SupabaseManager.isConfigured || DrawingFolderSyncCoordinator.shared.isTestBypassConfigured else {
             return nil
         }
 

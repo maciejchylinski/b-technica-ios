@@ -62,11 +62,13 @@ extension AppDatabase {
                 arguments: [projectId.uuidString]
             )
 
+            // One grouped calibration query instead of one query per drawing.
+            let calibrationsByDrawing = try Self.fetchCalibrationsByDrawing(projectId: projectId, db: db)
             var result: [Drawing] = []
             result.reserveCapacity(drawingRows.count)
             for row in drawingRows {
                 var drawing = try Self.drawing(from: row)
-                drawing.calibrations = try Self.fetchCalibrations(drawingId: drawing.id, db: db)
+                drawing.calibrations = calibrationsByDrawing[drawing.id.uuidString] ?? []
                 result.append(drawing)
             }
             return result
@@ -138,6 +140,54 @@ extension AppDatabase {
                 keepIds: Set(folders.map(\.id.uuidString)),
                 db: db
             )
+        }
+    }
+
+    /// Applies only the entities that changed since the last successful save, in one
+    /// transaction. Upsert SQL is shared with `persistProjectWorkspace`; deletions are
+    /// limited to ids the caller removed (dependents before parents), so rows written by
+    /// a remote pull that memory has not reloaded yet are never treated as orphans.
+    func persistProjectWorkspaceDelta(project: Project, delta: ProjectWorkspaceDelta) throws {
+        try dbQueue.write { db in
+            try Self.upsertProject(project, db: db)
+            try Self.upsertFolders(delta.upsertFolders, db: db)
+            try Self.upsertDrawingsAndCalibrations(delta.upsertDrawings, db: db)
+            try Self.insertMissingParentDrawings(delta.ensureParentDrawings, db: db)
+            try Self.upsertAreas(delta.upsertAreas, db: db)
+            try Self.upsertIssuesAndPhotos(delta.upsertIssues, projectId: project.id, db: db)
+
+            let projectIdString = project.id.uuidString
+            for (table, ids) in [
+                ("issues", delta.deletedIssueIds),
+                ("areas", delta.deletedAreaIds),
+                ("drawings", delta.deletedDrawingIds),
+                ("drawing_folders", delta.deletedFolderIds)
+            ] {
+                for id in ids {
+                    try db.execute(
+                        sql: "DELETE FROM \(table) WHERE id = ? AND project_id = ?",
+                        arguments: [id.uuidString, projectIdString]
+                    )
+                }
+            }
+        }
+    }
+
+    /// Writes a parent drawing (with its in-memory calibrations) only when no row with its id
+    /// exists. An existing row — possibly newer from a remote pull — is left untouched, so
+    /// pulled name / revision / folder links are never reverted from a stale memory copy.
+    /// A row missing here was removed by a pull after memory loaded it; restoring it keeps
+    /// the user's new child, and later pulls keep it because it now has local dependents.
+    static func insertMissingParentDrawings(_ drawings: [Drawing], db: Database) throws {
+        for drawing in drawings {
+            let exists = try Bool.fetchOne(
+                db,
+                sql: "SELECT EXISTS(SELECT 1 FROM drawings WHERE id = ?)",
+                arguments: [drawing.id.uuidString]
+            ) ?? false
+            if !exists {
+                try upsertDrawingsAndCalibrations([drawing], db: db)
+            }
         }
     }
 
@@ -390,25 +440,71 @@ extension AppDatabase {
             """,
             arguments: [drawingId.uuidString]
         )
-        return try rows.map { row in
-            guard let id = UUID(uuidString: row["id"]) else {
-                throw DrawingMetadataStoreError.invalidRow("page_calibrations")
-            }
-            let unitRaw: String = row["entered_unit"]
-            let unit = LengthUnit(rawValue: unitRaw) ?? .mm
-            let calibratedRaw: String = row["calibrated_at"]
-            return PageCalibration(
-                id: id,
-                pageIndex: row["page_index"],
-                pointA: PDFPoint(x: row["point_a_x"], y: row["point_a_y"]),
-                pointB: PDFPoint(x: row["point_b_x"], y: row["point_b_y"]),
-                realDistanceMM: row["real_distance_mm"],
-                enteredUnit: unit,
-                enteredValue: row["entered_value"],
-                mmPerPDFUnit: row["mm_per_pdf_unit"],
-                calibratedDate: SQLiteDateCoding.date(from: calibratedRaw) ?? Date()
-            )
+        return try rows.map(calibration(from:))
+    }
+
+    /// Calibrations for every drawing of a project, grouped by `drawing_id` string and
+    /// ordered by `page_index` within each drawing (same order as `fetchCalibrations`).
+    private static func fetchCalibrationsByDrawing(projectId: UUID, db: Database) throws -> [String: [PageCalibration]] {
+        let rows = try Row.fetchAll(
+            db,
+            sql: """
+            SELECT c.id, c.drawing_id, c.page_index, c.point_a_x, c.point_a_y, c.point_b_x, c.point_b_y,
+                   c.real_distance_mm, c.entered_unit, c.entered_value, c.mm_per_pdf_unit, c.calibrated_at
+            FROM page_calibrations c
+            JOIN drawings d ON d.id = c.drawing_id
+            WHERE d.project_id = ?
+            ORDER BY c.drawing_id ASC, c.page_index ASC
+            """,
+            arguments: [projectId.uuidString]
+        )
+        var grouped: [String: [PageCalibration]] = [:]
+        for row in rows {
+            let drawingId: String = row["drawing_id"]
+            grouped[drawingId, default: []].append(try calibration(from: row))
         }
+        return grouped
+    }
+
+    private static func calibration(from row: Row) throws -> PageCalibration {
+        guard let id = UUID(uuidString: row["id"]) else {
+            throw DrawingMetadataStoreError.invalidRow("page_calibrations")
+        }
+        let unitRaw: String = row["entered_unit"]
+        let unit = LengthUnit(rawValue: unitRaw) ?? .mm
+        let calibratedRaw: String = row["calibrated_at"]
+        return PageCalibration(
+            id: id,
+            pageIndex: row["page_index"],
+            pointA: PDFPoint(x: row["point_a_x"], y: row["point_a_y"]),
+            pointB: PDFPoint(x: row["point_b_x"], y: row["point_b_y"]),
+            realDistanceMM: row["real_distance_mm"],
+            enteredUnit: unit,
+            enteredValue: row["entered_value"],
+            mmPerPDFUnit: row["mm_per_pdf_unit"],
+            calibratedDate: SQLiteDateCoding.date(from: calibratedRaw) ?? Date()
+        )
+    }
+}
+
+/// Workspace entities changed since the last successful SQLite save (see `AppStore.persist`).
+struct ProjectWorkspaceDelta {
+    var upsertFolders: [DrawingFolder] = []
+    var upsertDrawings: [Drawing] = []
+    var upsertAreas: [Area] = []
+    var upsertIssues: [Issue] = []
+    /// Parents of `upsertIssues` / `upsertAreas`; inserted only if missing, never overwritten.
+    var ensureParentDrawings: [Drawing] = []
+    var deletedIssueIds: [UUID] = []
+    var deletedAreaIds: [UUID] = []
+    var deletedDrawingIds: [UUID] = []
+    var deletedFolderIds: [UUID] = []
+
+    var isEmpty: Bool {
+        upsertFolders.isEmpty && upsertDrawings.isEmpty && upsertAreas.isEmpty && upsertIssues.isEmpty
+            && ensureParentDrawings.isEmpty
+            && deletedIssueIds.isEmpty && deletedAreaIds.isEmpty
+            && deletedDrawingIds.isEmpty && deletedFolderIds.isEmpty
     }
 }
 

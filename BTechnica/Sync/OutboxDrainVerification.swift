@@ -93,7 +93,7 @@ enum OutboxDrainVerification {
             pageCount: 1, createdDate: Date(), revisionLabel: nil, discipline: nil, location: nil, drawingDate: nil,
             revisionId: UUID(), storagePath: "\(projectB.id.uuidString)/\(drawingId.uuidString).pdf"
         )
-        try db.dbQueue.write { conn in
+        try await db.dbQueue.write { conn in
             try AppDatabase.insertOutboxEntry(
                 operationId: drawingOpId, entityType: .drawing, entityId: drawingId, operation: .create,
                 payloadJSON: try AppDatabase.drawingPayloadJSON(payload), db: conn
@@ -146,7 +146,7 @@ enum OutboxDrainVerification {
         guard try db.enqueueDrawingMetadataSyncIfNeeded(drawingId: drawing.id) else {
             return Result(passed: false, message: "S2 setup: drawing create op not enqueued")
         }
-        try db.dbQueue.write { conn in
+        try await db.dbQueue.write { conn in
             try conn.execute(sql: "UPDATE file_transfers SET status = 'pending' WHERE id = ?", arguments: [transfer.id.uuidString])
         }
         try await tick()

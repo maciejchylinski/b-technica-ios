@@ -73,6 +73,8 @@ struct ScheduleHomeView: View {
                     .safeAreaInset(edge: .top, spacing: 0) { sectionPicker }
             }
         }
+        // StateObject does not auto-inject; list/Gantt/overview all need ScheduleStore.
+        .environmentObject(store)
         .background(Theme.background)
         .navigationTitle(store.schedule?.name ?? "Schedule")
         .navigationBarTitleDisplayMode(.inline)

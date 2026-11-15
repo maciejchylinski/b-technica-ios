@@ -270,6 +270,7 @@ struct BTechnicaApp: App {
         WorkspaceDeltaPersistenceVerification.runIfRequested()
         OutboxDrainVerification.runIfRequested()
         DemoSeedVerification.runIfRequested()
+        GanttHangProbe.runIfRequested()
         #endif
     }
 

@@ -305,14 +305,17 @@ enum ProjectKnowledgeVerification {
         db = try AppDatabase.open(userId: userId, at: dbURL, rootURL: root)
         let reopenedDocs = try db.fetchProjectDocuments(projectId: projectA.id)
         let reopenedSpec = reopenedDocs.first { $0.id == spec.id }
+        let reopenedFoldersA = try db.fetchDocumentFolders(projectId: projectA.id)
+        let reopenedNotesA = try db.fetchProjectNotes(projectId: projectA.id)
+        let reopenedFoldersB = try db.fetchDocumentFolders(projectId: projectB.id)
         check("persistence: documents, folders, notes survive reopen",
               reopenedDocs.count == 2
                 && reopenedSpec?.folderId == child.id
                 && reopenedSpec?.revision == "B"
                 && reopenedSpec?.indexStatus == .indexed
-                && (try db.fetchDocumentFolders(projectId: projectA.id)).count == 2
-                && (try db.fetchProjectNotes(projectId: projectA.id)).count == 1
-                && (try db.fetchDocumentFolders(projectId: projectB.id)).isEmpty,
+                && reopenedFoldersA.count == 2
+                && reopenedNotesA.count == 1
+                && reopenedFoldersB.isEmpty,
               "docs=\(reopenedDocs.count)")
         check("persistence: search works after reopen", firstPage(try pageHit("beton C25/30"), document: spec.id) == 1)
         check("persistence: checksum still matches file",
